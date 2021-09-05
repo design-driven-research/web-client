@@ -113,15 +113,26 @@
 (defn seed-base-data
   []
   [;;  Nodes
-   {:db/id -1 :node/name "Salt" :node/categories [-102] :node/uom [:uom/code "gram"] :node/yield 1}
+   {:db/id -1 :node/name "Salt" :node/uom [:uom/code "gram"] :node/yield 1}
    {:db/id -2 :node/name "Pepper" :node/uom [:uom/code "gram"] :node/yield 1}
-   {:db/id -3 :node/name "Sauce" :node/uom [:uom/code "gram"] :node/yield 100}
-   {:db/id -4 :node/name "Chorizo Wrap" :node/uom -302 :node/yield 1}
+   {:db/id -3 :node/name "Paprila" :node/uom [:uom/code "gram"] :node/yield 1}
+   {:db/id -4 :node/name "Garlic powder" :node/uom [:uom/code "gram"] :node/yield 1}
+
+   {:db/id -5 :node/name "Oil mix" :node/uom [:uom/code "gram"] :node/yield 50}
+   {:db/id -6 :node/name "Pesto Sauce" :node/uom [:uom/code "gram"] :node/yield 1}
+   {:db/id -7 :node/name "Master Sauce" :node/uom [:uom/code "gram"] :node/yield 100}
+
+   {:db/id -8 :node/name "Chorizo Wrap" :node/uom [:uom/code "gram"] :node/yield 1}
 
   ;;  Edges
-   {:edge/child -1 :edge/parent -3 :node/_parents -1 :node/_children -3 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -2 :edge/parent -3 :node/_parents -2 :node/_children -3 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -3 :edge/parent -4 :node/_parents -3 :node/_children -4 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -1 :edge/parent -5 :node/_parents -1 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -2 :edge/parent -5 :node/_parents -2 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -3 :edge/parent -5 :node/_parents -3 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -4 :edge/parent -5 :node/_parents -4 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+
+   {:edge/child -5 :edge/parent -6 :node/_parents -5 :node/_children -6 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -6 :edge/parent -7 :node/_parents -6 :node/_children -7 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:edge/child -7 :edge/parent -8 :node/_parents -7 :node/_children -8 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
 
   ;;  Categories
    {:db/id -100 :category/name "Food"}
