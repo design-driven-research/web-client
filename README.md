@@ -9,12 +9,16 @@ The ultimate recipe builder and coster
 1. Calva
 1. Shadow CLJS
 
+Install deps
+
+```
+yarn
+```
+
 Start shadow
 
 ```bash
-npx shadow-cljs watch frontend
+yarn start
 ```
 
 Navigate to: [http://localhost:4200](http://localhost:4200)
-
-Connect via calva jack-in

@@ -193,7 +193,6 @@
   [name]
   (node->tree (d/entity @dsdb [:node/name name])))
 
-
 (defn update-node-name!
   [name]
   (let [new-name (str (random-uuid))]
@@ -202,6 +201,9 @@
 
 ;; Setup the DB
 (seed-db)
+
+;; Fiddle
+#_(node-by-name "Chorizo Wrap")
 
 ;; Reset
 #_(reset-db)

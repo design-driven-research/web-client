@@ -3,8 +3,9 @@
             [helix.dom :as d]))
 
 (defnc node-view
-  [{:keys [node update-name-handler]}]
+  [{:keys [node update-name-handler] :as props}]
   {:wrap [(helix.core/memo)]}
+  (tap> props)
   (let [{:keys [name children]} node]
     (d/div
      (d/span {:on-click #(update-name-handler name)} name)
