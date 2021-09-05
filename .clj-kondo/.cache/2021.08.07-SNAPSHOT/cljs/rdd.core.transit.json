@@ -1,1 +1,0 @@
-["^ ","~$greeting",["^ ","~:row",8,"~:col",1,"~:fixed-arities",["~#set",[1]],"~:name","^0","~:ns","~$rdd.core","~:top-ns","^7"],"~$app",["^ ","^1",14,"^2",1,"^3",["^4",[0]],"^5","^9","^6","^7","^8","^7"],"~$init!",["^ ","^1",24,"^2",1,"^3",["^4",[0]],"^5","^:","^6","^7","^8","^7"],"~:filename","/Users/nevadasmith/Documents/projects/rdd/web-client/src/rdd/core.cljs"]

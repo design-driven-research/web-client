@@ -6,7 +6,7 @@
         has-child-node? (:edge/child e)
 
         build-node-with-children (fn [node]
-                                   (let [children (map node->tree (:node/children node))
+                                   (let [children (mapv node->tree (:node/children node))
                                          id (-> node :db/id)
                                          name (-> node :node/name)
                                          yield (-> node :node/yield)

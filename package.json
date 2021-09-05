@@ -9,8 +9,8 @@
     "shadow-cljs": "2.15.6"
   },
   "dependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-refresh": "0.8.1"
+    "react": "^18.0.0-alpha-88d121899-20210811",
+    "react-dom": "^18.0.0-alpha-88d121899-20210811",
+    "react-refresh": "^0.11.0-alpha-82583617b-20210812"
   }
 }

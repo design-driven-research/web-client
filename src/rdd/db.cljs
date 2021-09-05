@@ -187,10 +187,12 @@
 (reset-db)
 (seed-db)
 
-(->> @dsdb
-     :aevt
-     (sort-by (fn [h] (:e h)))
-     tap>)
+#_(->> @dsdb
+       :aevt
+       (sort-by (fn [h] (:e h)))
+       tap>)
+
+
 
 
 (comment
@@ -217,7 +219,7 @@
   ;; 
   )
 
-(tap> (node->tree (d/entity @dsdb [:node/name "Chorizo Wrap"])))
+#_(tap> (node->tree (d/entity @dsdb [:node/name "Chorizo Wrap"])))
 
 ;; (time (node->tree (d/entity @dsdb [:node/name "Chorizo Wrap"])))
 ;; => {:id 20,
@@ -250,6 +252,14 @@
 (defn node-by-name
   [name]
   (node->tree (d/entity @dsdb [:node/name name])))
+
+
+(defn update-son
+  [node-name name]
+  (let [new-name (str (random-uuid))]
+    (d/transact! dsdb [[:db/add [:node/name name] :node/name new-name]])
+    (tap> (node-by-name node-name))
+    (node-by-name node-name)))
 
 (defn entity-by-id
   [id]

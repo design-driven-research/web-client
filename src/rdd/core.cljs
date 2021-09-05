@@ -2,25 +2,36 @@
   (:require [helix.core :refer [defnc $]]
             [helix.hooks :as hooks]
             [helix.dom :as d]
+            [rdd.db :as db]
+            [rdd.views.node-tree :refer [node-view]]
             ["react-dom" :as rdom]))
 
-;; define components using the `defnc` macro
-(defnc greeting
-  "A component which greets a user."
-  [{:keys [name]}]
-  ;; use helix.dom to create DOM elements
-  (d/div "Hello, " (d/strong name) "!"))
-
 (defnc app []
-  (let [[state set-state] (hooks/use-state {:name "Helix User"})]
-    (d/div
-     (d/h1 "Welcome!")
-      ;; create elements out of components
-     ($ greeting {:name (:name state)})
-     (d/input {:value (:name state)
-               :on-change #(set-state assoc :name (.. % -target -value))}))))
+  (let [[node set-state] (hooks/use-state (db/node-by-name "Chorizo Wrap"))
+        run-it (hooks/use-callback :once (fn [name]
+                                           (let [new-data (db/update-son "Chorizo Wrap" name)]
+                                             (set-state new-data))))]
 
-;; start your app with your favorite React renderer
-(defn init!
+    ($ :div
+       ($ node-view {:node node :callback run-it}))))
+
+
+(defn render
   []
   (rdom/render ($ app) (js/document.getElementById "app")))
+
+;; (defn ^:dev/after-load reload
+;;   "Render the toplevel component for this app."
+;;   []
+;;   (rdom/unmountComponentAtNode (js/document.getElementById "app"))
+;;   (render))
+
+
+
+(defonce root (rdom/createRoot (js/document.getElementById "app")))
+
+(defn ^:dev/after-load init!
+  []
+  (.render root ($ app)))
+
+;; (defn ^:export init! "Run application startup logic." [] (render))
