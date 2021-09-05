@@ -1,21 +1,16 @@
 (ns rdd.views.node-tree
-  (:require [helix.core :refer [defnc $]]
-            [helix.hooks :as hooks]
+  (:require [helix.core :refer [$ defnc]]
             [helix.dom :as d]))
 
-
-
 (defnc node-view
-  [{:keys [node callback]}]
+  [{:keys [node update-name-handler]}]
   {:wrap [(helix.core/memo)]}
   (let [{:keys [name children]} node]
-    ($ :div
-       ($ :span {:on-click (fn [] (callback name))} name)
-
-       ($ :div
-          (for [{:keys [id] :as child} children]
-            ($ node-view {:key id
-                          :node child
-                          :callback callback}))))))
-
-
+    (d/div
+     (d/span {:on-click #(update-name-handler name)} name)
+     (d/div {:style {:margin-top "6px"}}
+            (d/div {:style {:padding-left "10px"}}
+                   (for [{:keys [id] :as child} children]
+                     ($ node-view {:key id
+                                   :node child
+                                   :update-name-handler update-name-handler})))))))
