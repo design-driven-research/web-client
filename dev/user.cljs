@@ -1,0 +1,17 @@
+(ns dev.user
+  (:require [datascript.core :as d]
+
+            [re-posh.core       :refer [connect!]]))
+
+
+(let [schema {:aka {:db/cardinality :db.cardinality/many}}
+      conn   (d/create-conn schema)]
+  (d/transact! conn [{:db/id -1
+                      :name  "Maksim"
+                      :age   45
+                      :aka   ["Max Otto von Stierlitz", "Jack Ryan"]}])
+  (d/q '[:find  ?n ?a ?e
+         :where [?e :aka "Max Otto von Stierlitz"]
+         [?e :name ?n]
+         [?e :age  ?a]]
+       @conn))

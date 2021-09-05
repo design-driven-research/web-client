@@ -1,0 +1,38 @@
+{:source-paths
+ ["dev"
+  "src"]
+
+ :dependencies
+ [[cljs-ajax "0.8.3"]
+  [datascript "1.2.8"]
+  [com.google.guava/guava "25.1-jre"]
+  [datascript-transit "0.3.0"]
+  [cprop "0.1.18"]
+  [day8.re-frame/http-fx "0.2.3"]
+  [day8.re-frame/async-flow-fx "0.2.0"]
+  [applied-science/js-interop "0.2.7"]
+  [expound "0.8.9"]
+  [funcool/struct "1.4.0"]
+  [aysylu/loom "1.0.2"]
+  [io.rkn/conformity "0.5.1"]
+  [json-html "0.4.7"]
+  [re-com "2.13.2"]
+  [com.taoensso/timbre "5.1.2"]
+  [postmortem "0.5.0"]
+  [lilactown/helix "0.1.2"]
+  [nano-id "1.0.0"]
+  [metosin/muuntaja "0.6.8"]
+  [metosin/reitit "0.5.13"]
+  [mount "0.1.16"]
+  [nrepl "0.8.3"]
+  [re-frame "1.2.0"]
+  [lilactown/autonormal "2.0.0"]
+  [reagent "1.1.0"]
+  [selmer "1.12.44"]]
+
+ :dev-http {4200 "public"}
+ :builds
+ {:frontend
+  {:target :browser
+   :dev {:compiler-options {:output-feature-set :es6}}
+   :modules {:main {:init-fn rdd.core/init!}}}}}
