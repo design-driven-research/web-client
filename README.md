@@ -15,10 +15,10 @@ Install deps
 yarn
 ```
 
-Start shadow
+Start dev env. This will fire up shadow-cljs and tailwind via postcss
 
 ```bash
-yarn start
+yarn dev
 ```
 
 Navigate to: [http://localhost:4200](http://localhost:4200)

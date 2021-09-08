@@ -198,6 +198,16 @@
   (let [new-name (str (random-uuid))]
     (d/transact! dsdb [[:db/add [:node/name name] :node/name new-name]])))
 
+(defn update-edge-quantity!
+  [edge-id qty]
+  (let [parsed-quantity (js/parseFloat qty)
+        prepped-quantity (if (and (number? parsed-quantity)
+                                  (>= parsed-quantity 0))
+                           parsed-quantity
+                           0)
+        has-edge-id? edge-id]
+    (when has-edge-id?
+      (d/transact! dsdb [[:db/add edge-id :edge/quantity prepped-quantity]]))))
 
 ;; Setup the DB
 (seed-db)
