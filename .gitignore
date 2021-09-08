@@ -1,5 +1,7 @@
 node_modules/
 public/js
+public/css
+
 
 /target
 /checkouts
@@ -22,4 +24,7 @@ pom.xml.asc
 .lsp
 .calva
 
-.clj-kondo
+.clj-kondo/.cache
+
+.logs
+

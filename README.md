@@ -9,12 +9,16 @@ The ultimate recipe builder and coster
 1. Calva
 1. Shadow CLJS
 
-Start shadow
+Install deps
+
+```
+yarn
+```
+
+Start dev env. This will fire up shadow-cljs and tailwind via postcss
 
 ```bash
-npx shadow-cljs watch frontend
+yarn dev
 ```
 
 Navigate to: [http://localhost:4200](http://localhost:4200)
-
-Connect via calva jack-in

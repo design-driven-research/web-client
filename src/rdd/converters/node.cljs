@@ -22,10 +22,12 @@
 
         build-edge (fn [edge]
                      (let [node (node->tree (:edge/child edge))
+                           edge-id (:db/id edge)
                            quantity (:edge/quantity edge)
                            uom (-> edge :edge/uom :uom/code)
                            total-cost (* quantity (-> node :normalized-cost))]
                        (merge node {:quantity quantity
+                                    :edge-id edge-id
                                     :total-cost total-cost
                                     :uom uom})))
 

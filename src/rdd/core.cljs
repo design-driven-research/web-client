@@ -1,64 +1,28 @@
 (ns rdd.core
-  (:require [re-frame.core :as rf]
-            [rdd.events :as evt]
-            [datascript.transit :as dt]
-            [datascript.core :as d]
-            [reagent.core :as reagent :refer [atom]]
-            [reagent.dom :as rdom]
-            ;; [db :refer [conn]]
-            [rdd.views :as views]
-            [rdd.syncer]
-            [taoensso.timbre :as timbre
-             :refer-macros [info]]))
+  (:require [helix.core :refer [$ defnc]]
+            [helix.hooks :as hooks]
+            [rdd.components.nav-bar.main :refer [nav-bar]]
+            [rdd.db :as db]
+            [rdd.views.node-tree :refer [node-view]]
+            ["react-dom" :as rdom]))
 
-(defn dev-setup []
-  (when true
-    (info "dev mode")))
+(defnc app []
+  (let [product-name "Chorizo Wrap"
+        [node set-state] (hooks/use-state (db/node-by-name product-name))
+        update-quantity (hooks/use-callback :once (fn [edge-id quantity]
+                                                    (db/update-edge-quantity! edge-id quantity)
+                                                    (set-state (db/node-by-name product-name))))
+        update-name (hooks/use-callback :once (fn [ingredient-name]
+                                                (db/update-node-name! ingredient-name)
+                                                (set-state (db/node-by-name product-name))))]
+    ($ :div {:class "p-4"}
+       ($ nav-bar)
+       ($ node-view {:node node
+                     :update-name-handler update-name
+                     :update-quantity-handler update-quantity}))))
 
-(defn ^:dev/after-load mount-root []
+(defonce root (rdom/createRoot (js/document.getElementById "app")))
 
-  ;; Restart DB on each save. Disable if you want to retain state
-  ;; across saves
-  ;; (rf/dispatch-sync [::events/initialize-db])
-  ;; (re-posh/dispatch-sync [::evt/initialize-db])
-
-  (rf/clear-subscription-cache!)
-
-  (let [root-el (.getElementById js/document "app")]
-    (rdom/unmount-component-at-node root-el)
-    (rdom/render [views/main-panel] root-el)))
-
-(defn init! []
-  (dev-setup)
-  (rf/dispatch-sync [::evt/initialize-db])
-  #_(let [stored (js/localStorage.getItem "datascript/db")]
-      (if stored
-
-        #_(reset! conn (dt/read-transit-str stored))
-        (re-posh/dispatch-sync [::evt/initialize-db])
-        #_(re-posh/dispatch-sync [::evt/initialize-db])))
-
-  (mount-root))
-
-;; (comment
-
-;;   (->> (js/localStorage.getItem "datascript/db")
-;;        (dt/read-transit-str)
-;;        (reset! conn))
-;;   ;; => #datascript/DB {:schema nil, :datoms [[1 :app/type :type/create-todo-form 536870913] [1 :create-todo-form/description "" 536870913] [1 :create-todo-form/title "" 536870913] [2 :app/type :type/task 536870913] [2 :task/description "Just learn it" 536870913] [2 :task/done? false 536870913] [2 :task/title "Learn Clojure a little bit" 536870913] [3 :app/type :type/task 536870913] [3 :task/description "Just relax" 536870913] [3 :task/done? false 536870913] [3 :task/title "Have a coffe" 536870913]]}
-
-
-;;   @conn
-;;   ;; => #datascript/DB {:schema nil, :datoms [[1 :app/type :type/create-todo-form 536870913] [1 :create-todo-form/description "" 536870913] [1 :create-todo-form/title "" 536870913] [2 :app/type :type/task 536870913] [2 :task/description "Just learn it" 536870913] [2 :task/done? false 536870913] [2 :task/title "Learn Clojure a little bit" 536870913] [3 :app/type :type/task 536870913] [3 :task/description "Just relax" 536870913] [3 :task/done? false 536870913] [3 :task/title "Have a coffe" 536870913]]}
-
-;;   ;; => #datascript/DB {:schema nil, :datoms [[1 :app/type :type/create-todo-form 536870913] [1 :create-todo-form/description "" 536870913] [1 :create-todo-form/title "" 536870913] [2 :app/type :type/task 536870913] [2 :task/description "Just learn it" 536870913] [2 :task/done? false 536870913] [2 :task/title "Learn Clojure a little bit" 536870913] [3 :app/type :type/task 536870913] [3 :task/description "Just relax" 536870913] [3 :task/done? false 536870913] [3 :task/title "Have a coffe" 536870913]]}
-
-;;   ;; => #datascript/DB {:schema nil, :datoms [[1 :app/type :type/create-todo-form 536870913] [1 :create-todo-form/description "" 536870913] [1 :create-todo-form/title "" 536870913] [2 :app/type :type/task 536870913] [2 :task/description "Just learn it" 536870913] [2 :task/done? false 536870913] [2 :task/title "Learn Clojure a little bit" 536870913] [3 :app/type :type/task 536870913] [3 :task/description "Just relax" 536870913] [3 :task/done? false 536870913] [3 :task/title "Have a coffe" 536870913]]}
-
-;;   ;; => #datascript/DB {:schema nil, :datoms [[1 :app/type :type/create-todo-form 536870913] [1 :create-todo-form/description "" 536870913] [1 :create-todo-form/title "" 536870913] [2 :app/type :type/task 536870913] [2 :task/description "Just learn it" 536870913] [2 :task/done? false 536870913] [2 :task/title "Learn Clojure a little bit" 536870913] [3 :app/type :type/task 536870913] [3 :task/description "Just relax" 536870913] [3 :task/done? false 536870913] [3 :task/title "Have a coffe" 536870913]]}
-
-
-
-
-;;   ;; 
-;;   )
+(defn ^:dev/after-load init!
+  []
+  (.render root ($ app)))

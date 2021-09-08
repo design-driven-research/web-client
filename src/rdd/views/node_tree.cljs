@@ -1,17 +1,38 @@
-(ns rdd.views.node-tree)
+(ns rdd.views.node-tree
+  (:require [helix.core :refer [$ defnc]]
+            [helix.dom :as d]
+            ["antd" :refer [Input Select]]))
+(def Option (. Select -Option))
 
-(defn menu-bar
-  [{:keys [name]} update-name-handler]
-  [:div
-   [:span {:on-click #(update-name-handler name)} name]])
+(defnc node-form
+  [{:keys [update-name-handler update-quantity-handler]
+    {:keys [name quantity edge-id total-cost]} :node :as node}]
+  (tap> node)
+  (d/div {:class "flex w-5/12 items-center space-between"}
+         (d/span {:class "w-6/12"} (str name " - " total-cost))
+         (d/div {:class "w-6/12"}
+                ($ Input {:className ""
+                          :value quantity
+                          :onChange #(update-quantity-handler edge-id (.. % -target -value))
+                          :addonAfter ($ Select {:className "select-after" :defaultValue "gram"}
+                                         ($ Option {:value "lb"} "lb")
+                                         ($ Option {:value "kg"} "kg"))}))))
 
-(defn node-view
-  [node update-name-handler]
-  (let [{:keys [children]} node]
-    [:<>
-     [:div
-      [menu-bar node update-name-handler]]
-     [:div {:style {:padding-left "10px"}}
-      (for [child children]
-        ^{:key (:id child)}
-        [node-view child update-name-handler])]]))
+(defnc node-view
+  [{:keys [node update-name-handler update-quantity-handler]
+    {:keys [children]} :node}]
+
+  {:wrap [(helix.core/memo =)]}
+
+  (d/div {:class "ml-4"}
+         ($ node-form {:node node
+                       :update-name-handler update-name-handler
+                       :update-quantity-handler update-quantity-handler})
+         (d/div {:class "mt-2"}
+                (d/div
+                 (for [{:keys [id] :as child} children]
+                   ($ rdd.views.node-tree/node-view
+                      {:key id
+                       :node child
+                       :update-quantity-handler update-quantity-handler
+                       :update-name-handler update-name-handler}))))))
