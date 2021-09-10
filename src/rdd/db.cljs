@@ -31,7 +31,6 @@
                  :db/valueType :db.type/ref}
    :edge/child {:db/cardinality :db.cardinality/one
                 :db/valueType :db.type/ref}
-
    :edge/uom {:db/cardinality :db.cardinality/one
               :db/valueType :db.type/ref}})
 
@@ -209,6 +208,8 @@
     (when has-edge-id?
       (d/transact! dsdb [[:db/add edge-id :edge/quantity prepped-quantity]]))))
 
+
+
 ;; Setup the DB
 (seed-db)
 
@@ -217,3 +218,13 @@
 
 ;; Reset
 #_(reset-db)
+
+
+#_(def timer
+    (let [count (atom 1)]
+      (js/setInterval (fn []
+                        (js/console.log "hi" @count)
+                        (swap! count inc)
+                        (update-edge-quantity! 27 @count)) 1000)))
+
+;; (update-edge-quantity! 27 20)

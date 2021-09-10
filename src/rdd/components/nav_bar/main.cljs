@@ -2,6 +2,7 @@
   (:require ["@ant-design/icons" :refer [DownloadOutlined]]
             ["antd" :refer [Button]]
             [helix.core :refer [$ defnc]]
+            [rdd.services.store :as store]
 
             [helix.dom :as d]))
 
@@ -11,6 +12,6 @@
          ($ Button {:className "mr-2"
                     :type "primary"
                     :icon ($ DownloadOutlined)
-                    :onClick (fn [] (js/console.log "Clicked1"))} "Hey there")
+                    :onClick (fn [] (store/load-initial!))} "Hey there")
          ($ Button {:type "primary"
                     :onClick (fn [] (js/console.log "Clicked2"))} "Hey there")))

@@ -1,2 +1,3 @@
 {:lint-as {helix.core/defnc clojure.core/defn
-           rdd.hello/inc-builder clojure.core/declare}}
+           rdd.hello/inc-builder clojure.core/declare
+           mount.core/defstate clojure.core/def}}
