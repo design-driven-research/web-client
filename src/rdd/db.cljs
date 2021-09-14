@@ -214,8 +214,8 @@
 (seed-db)
 
 ;; Fiddle
-#_(node-by-name "Chorizo Wrap")
-
+#_(tap> (node-by-name "Chorizo Wrap"))
+(tap> (d/datoms @dsdb :eavt))
 ;; Reset
 #_(reset-db)
 

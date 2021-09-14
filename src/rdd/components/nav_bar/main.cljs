@@ -12,6 +12,6 @@
          ($ Button {:className "mr-2"
                     :type "primary"
                     :icon ($ DownloadOutlined)
-                    :onClick (fn [] (store/load-initial!))} "Hey there")
+                    :onClick (fn [] (store/load-initial!))} "Download recipe")
          ($ Button {:type "primary"
-                    :onClick (fn [] (js/console.log "Clicked2"))} "Hey there")))
+                    :onClick (fn [] (js/console.log "Clicked2"))} "Settings")))
