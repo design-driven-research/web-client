@@ -3,7 +3,7 @@
             [rdd.converters.item :refer [item->tree]]
             [reagent.core :as r]
             [clojure.edn]
-            [rdd.services.event-bus :refer [publish]]
+            [rdd.services.event-bus :refer [publish!]]
             [shadow.resource :as rc]))
 
 (defn item-schema
@@ -273,13 +273,10 @@
     (d/transact! dsdb [payload])
     id))
 
-(defn load-from-remote!
+(defn tree->db!
   [data]
-  (-> data
-      first
-      :value
-      create-item!)
-  (publish {:data "Yes"}))
+  (create-item! data)
+  (publish! {:topic :remote-db-loaded}))
 
 
 ;; Fiddle

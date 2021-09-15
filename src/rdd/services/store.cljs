@@ -1,11 +1,9 @@
 (ns rdd.services.store
   (:require [rdd.services.web-socket :refer [send!]]
-            [rdd.db :refer [load-from-remote!]]))
+            [rdd.db :refer [tree->db!]]))
 
-(defn load-initial!
-  []
-  (send! :id :data/load-initial! :data {} :reply? (fn [reply]
-                                                    (load-from-remote! reply)
-                                                    (tap> reply))))
-
-;; (load-initial!)
+(defn item-by-name
+  [product-name]
+  (send! :id :data/item-by-name
+         :data {:product-name product-name}
+         :reply? tree->db!))

@@ -2,9 +2,8 @@
   (:require ["@ant-design/icons" :refer [DownloadOutlined]]
             ["antd" :refer [Button]]
             [helix.core :refer [$ defnc]]
-            [rdd.services.store :as store]
-
-            [helix.dom :as d]))
+            [helix.dom :as d]
+            [rdd.services.store :as store]))
 
 (defnc nav-bar
   []
@@ -12,6 +11,6 @@
          ($ Button {:className "mr-2"
                     :type "primary"
                     :icon ($ DownloadOutlined)
-                    :onClick (fn [] (store/load-initial!))} "Download recipe")
+                    :onClick (fn [] (store/item-by-name "Chorizo Family Pack"))} "Download recipe")
          ($ Button {:type "primary"
                     :onClick (fn [] (js/console.log "Clicked2"))} "Settings")))
