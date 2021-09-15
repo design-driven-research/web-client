@@ -1,19 +1,19 @@
-(ns rdd.converters.node)
+(ns rdd.converters.item)
 
-(defn node->tree
+(defn item->tree
   [e]
-  (let [has-child-nodes? (:node/children e)
-        has-child-node? (:edge/child e)
+  (let [has-child-nodes? (:item/children e)
+        has-child-node? (:recipe-line-item/child e)
 
         build-node-with-children (fn [node]
-                                   (let [children (mapv node->tree (:node/children node))
+                                   (let [children (mapv item->tree (:item/children node))
                                          id (-> node :db/id)
-                                         name (-> node :node/name)
-                                         yield (-> node :node/yield)
+                                         name (-> node :item/name)
+                                         yield (-> node :item/yield)
                                          total-children-cost (->> children
                                                                   (map :total-cost)
                                                                   (reduce +))
-                                         normalized-cost (/ total-children-cost yield)]
+                                         normalized-cost (or (/ total-children-cost yield) 1)]
                                      {:id id
                                       :name name
                                       :yield yield
@@ -21,10 +21,10 @@
                                       :children children}))
 
         build-edge (fn [edge]
-                     (let [node (node->tree (:edge/child edge))
+                     (let [node (item->tree (:recipe-line-item/child edge))
                            edge-id (:db/id edge)
-                           quantity (:edge/quantity edge)
-                           uom (-> edge :edge/uom :uom/code)
+                           quantity (:recipe-line-item/quantity edge)
+                           uom (-> edge :recipe-line-item/uom :uom/code)
                            total-cost (* quantity (-> node :normalized-cost))]
                        (merge node {:quantity quantity
                                     :edge-id edge-id
@@ -33,9 +33,9 @@
 
         build-base-node (fn [node]
                           (let [id (-> node :db/id)
-                                name (-> node :node/name)
-                                yield (-> node :node/yield)
-                                uom (-> node :node/uom :uom/code)
+                                name (-> node :item/name)
+                                yield (-> node :item/yield)
+                                uom (-> node :item/uom :uom/code)
                                 cost-per-yield 1
                                 normalized-cost (/ cost-per-yield yield)]
                             {:id id
@@ -47,3 +47,5 @@
       has-child-nodes? (build-node-with-children e)
       has-child-node? (build-edge e)
       :default (build-base-node e))))
+
+

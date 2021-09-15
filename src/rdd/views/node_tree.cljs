@@ -7,7 +7,6 @@
 (defnc node-form
   [{:keys [update-name-handler update-quantity-handler]
     {:keys [name quantity edge-id total-cost]} :node :as node}]
-  (tap> node)
   (d/div {:class "flex w-5/12 items-center space-between"}
          (d/span {:class "w-6/12"} (str name " - " total-cost))
          (d/div {:class "w-6/12"}

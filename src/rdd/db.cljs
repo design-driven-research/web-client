@@ -1,44 +1,47 @@
 (ns rdd.db
   (:require [datascript.core :as d]
-            [rdd.converters.node :refer [node->tree]]
-            [reagent.core :as r]))
+            [rdd.converters.item :refer [item->tree]]
+            [reagent.core :as r]
+            [clojure.edn]
+            [rdd.services.event-bus :refer [publish]]
+            [shadow.resource :as rc]))
 
-(defn node-schema
+(defn item-schema
   []
-  {:node/name {:db/unique :db.unique/identity}
-   :node/children {:db/valueType :db.type/ref
+  {:item/name {:db/unique :db.unique/identity}
+   :item/children {:db/valueType :db.type/ref
                    :db/cardinality :db.cardinality/many
                    :db/isComponent true}
-   :node/parents {:db/valueType :db.type/ref
-                  :db/cardinality :db.cardinality/many
-                  :db/isComponent true}
+   #_#_:item/parents {:db/valueType :db.type/ref
+                      :db/cardinality :db.cardinality/many
+                      :db/isComponent true}
 
-   :node/uom {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+   :item/uom {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
 
-   :node/categories {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
-   :node/tags {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
+   :item/categories {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+   :item/tags {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
 
-(defn category-schema
+#_(defn category-schema
+    []
+    {:category/name {:db/unique :db.unique/identity}
+     :category/parents {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+     :category/children {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
+
+(defn recipe-line-item-schema
   []
-  {:category/name {:db/unique :db.unique/identity}
-   :category/parents {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
-   :category/children {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
+  {:recipe-line-item/uid  {:db/unique :db.unique/identity}
+   :recipe-line-item/parent {:db/cardinality :db.cardinality/one
+                             :db/valueType :db.type/ref}
+   :recipe-line-item/child {:db/cardinality :db.cardinality/one
+                            :db/valueType :db.type/ref}
+   :recipe-line-item/uom {:db/cardinality :db.cardinality/one
+                          :db/valueType :db.type/ref}})
 
-(defn edge-schema
-  []
-  {:edge/uid  {:db/unique :db.unique/identity}
-   :edge/parent {:db/cardinality :db.cardinality/one
-                 :db/valueType :db.type/ref}
-   :edge/child {:db/cardinality :db.cardinality/one
-                :db/valueType :db.type/ref}
-   :edge/uom {:db/cardinality :db.cardinality/one
-              :db/valueType :db.type/ref}})
-
-(defn tag-schema
-  []
-  {:tag/name {:db/unique :db.unique/identity}
-   :tag/nodes {:db/valueType :db.type/ref
-               :db/cardinality :db.cardinality/many}})
+#_(defn tag-schema
+    []
+    {:tag/name {:db/unique :db.unique/identity}
+     :tag/items {:db/valueType :db.type/ref
+                 :db/cardinality :db.cardinality/many}})
 
 (defn uom-schema
   []
@@ -50,21 +53,21 @@
 
 (defn conversions-schema
   []
-  {:conversion/node {:db/valueType :db.type/ref}
+  {:conversion/item {:db/valueType :db.type/ref}
    :conversion/from {:db/valueType :db.type/ref}
    :conversion/to {:db/valueType :db.type/ref}})
 
 (defn cost-schema
   []
   {:cost/uom {:db/valueType :db.type/ref}
-   :cost/node {:db/valueType :db.type/ref}})
+   :cost/item {:db/valueType :db.type/ref}})
 
 (defn schema
   []
-  (merge (node-schema)
-         (category-schema)
-         (edge-schema)
-         (tag-schema)
+  (merge (item-schema)
+         #_(category-schema)
+         (recipe-line-item-schema)
+         #_(tag-schema)
          (uom-schema)
          (conversions-schema)
          (cost-schema)
@@ -91,7 +94,7 @@
   "Units of measure data prepped as datoms for insert"
   []
   [{:uom/name "Pound" :uom/code "lb" :uom/system :units.system/IMPERIAL :uom/type :units.type/WEIGHT :uom/factor 453.5920865}
-   {:uom/name "Gram" :uom/code "gram" :uom/system :units.system/METRIC :uom/type :units.type/WEIGHT :uom/factor 1}
+   {:uom/name "gr" :uom/code "gr" :uom/system :units.system/METRIC :uom/type :units.type/WEIGHT :uom/factor 1}
    {:uom/name "Ounce" :uom/code "oz" :uom/system :units.system/IMPERIAL :uom/type :units.type/WEIGHT :uom/factor 28.34949978}
    {:uom/name "Kilogram" :uom/code "kg" :uom/system :units.system/METRIC :uom/type :units.type/WEIGHT :uom/factor 1000}
 
@@ -105,27 +108,27 @@
 
 (defn seed-base-data
   []
-  [;;  Nodes
-   {:db/id -1 :node/name "Salt" :node/uom [:uom/code "gram"] :node/yield 1}
-   {:db/id -2 :node/name "Pepper" :node/uom [:uom/code "gram"] :node/yield 1}
-   {:db/id -3 :node/name "Paprila" :node/uom [:uom/code "gram"] :node/yield 1}
-   {:db/id -4 :node/name "Garlic powder" :node/uom [:uom/code "gram"] :node/yield 1}
+  [;;  items
+   {:db/id -1 :item/name "Salt" :item/uom [:uom/code "gr"] :item/yield 1}
+   {:db/id -2 :item/name "Pepper" :item/uom [:uom/code "gr"] :item/yield 1}
+   {:db/id -3 :item/name "Paprila" :item/uom [:uom/code "gr"] :item/yield 1}
+   {:db/id -4 :item/name "Garlic powder" :item/uom [:uom/code "gr"] :item/yield 1}
 
-   {:db/id -5 :node/name "Oil mix" :node/uom [:uom/code "gram"] :node/yield 50}
-   {:db/id -6 :node/name "Pesto Sauce" :node/uom [:uom/code "gram"] :node/yield 1}
-   {:db/id -7 :node/name "Master Sauce" :node/uom [:uom/code "gram"] :node/yield 100}
+   {:db/id -5 :item/name "Oil mix" :item/uom [:uom/code "gr"] :item/yield 50}
+   {:db/id -6 :item/name "Pesto Sauce" :item/uom [:uom/code "gr"] :item/yield 1}
+   {:db/id -7 :item/name "Master Sauce" :item/uom [:uom/code "gr"] :item/yield 100}
 
-   {:db/id -8 :node/name "Chorizo Wrap" :node/uom [:uom/code "gram"] :node/yield 1}
+   {:db/id -8 :item/name "Chorizo Wrap" :item/uom [:uom/code "gr"] :item/yield 1}
 
-  ;;  Edges
-   {:edge/child -1 :edge/parent -5 :node/_parents -1 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -2 :edge/parent -5 :node/_parents -2 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -3 :edge/parent -5 :node/_parents -3 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -4 :edge/parent -5 :node/_parents -4 :node/_children -5 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+  ;;  recipe-line-items
+   {:recipe-line-item/child -1 :recipe-line-item/parent -5 :item/_parents -1 :item/_children -5 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
+   {:recipe-line-item/child -2 :recipe-line-item/parent -5 :item/_parents -2 :item/_children -5 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
+   {:recipe-line-item/child -3 :recipe-line-item/parent -5 :item/_parents -3 :item/_children -5 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
+   {:recipe-line-item/child -4 :recipe-line-item/parent -5 :item/_parents -4 :item/_children -5 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
 
-   {:edge/child -5 :edge/parent -6 :node/_parents -5 :node/_children -6 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -6 :edge/parent -7 :node/_parents -6 :node/_children -7 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
-   {:edge/child -7 :edge/parent -8 :node/_parents -7 :node/_children -8 :edge/quantity 10 :edge/uom [:uom/code "gram"]}
+   {:recipe-line-item/child -5 :recipe-line-item/parent -6 :item/_parents -5 :item/_children -6 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
+   {:recipe-line-item/child -6 :recipe-line-item/parent -7 :item/_parents -6 :item/_children -7 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
+   {:recipe-line-item/child -7 :recipe-line-item/parent -8 :item/_parents -7 :item/_children -8 :recipe-line-item/quantity 10 :recipe-line-item/uom [:uom/code "gr"]}
 
   ;;  Categories
    {:db/id -100 :category/name "Food"}
@@ -137,13 +140,13 @@
    {:db/id -200
     :cost/quantity 1
     :cost/uom [:uom/code "lb"]
-    :cost/node [:node/name "Salt"]
+    :cost/item [:item/name "Salt"]
     :cost/cost 10}
 
    {:db/id -201
     :cost/quantity 1
     :cost/uom [:uom/code "lb"]
-    :cost/node [:node/name "Pepper"]
+    :cost/item [:item/name "Pepper"]
     :cost/cost 10}
 
   ;;  Conversions
@@ -156,19 +159,19 @@
    {:db/id -400
     :conversion/from -300
     :conversion/to [:uom/code "lb"]
-    :conversion/node [:node/name "Salt"]
+    :conversion/item [:item/name "Salt"]
     :conversion/factor 25}
 
    {:db/id -401
     :conversion/from -300
     :conversion/to [:uom/code "lb"]
-    :conversion/node [:node/name "Pepper"]
+    :conversion/item [:item/name "Pepper"]
     :conversion/factor 25}
 
    {:db/id -403
     :conversion/from -301
     :conversion/to [:uom/code "cs"]
-    :conversion/node [:node/name "Pepper"]
+    :conversion/item [:item/name "Pepper"]
     :conversion/factor 100}
 
   ;;  
@@ -182,42 +185,123 @@
   []
   (d/transact! dsdb (unit-systems-data))
   (d/transact! dsdb (uom-data))
-  (d/transact! dsdb (seed-base-data)))
+  #_(d/transact! dsdb (seed-base-data)))
 
-(defn reset-db
+(defn reset-db!
   []
   (d/reset-conn! dsdb (d/empty-db (schema))))
 
-(defn node-by-name
+(defn item-by-name
   [name]
-  (node->tree (d/entity @dsdb [:node/name name])))
+  (let [item (d/entity @dsdb [:item/name name])]
+    (when item
+      (item->tree item))))
 
-(defn update-node-name!
+(defn update-item-name!
   [name]
   (let [new-name (str (random-uuid))]
-    (d/transact! dsdb [[:db/add [:node/name name] :node/name new-name]])))
+    (d/transact! dsdb [[:db/add [:item/name name] :item/name new-name]])))
 
-(defn update-edge-quantity!
-  [edge-id qty]
+(defn update-recipe-line-item-quantity!
+  [recipe-line-item-id qty]
   (let [parsed-quantity (js/parseFloat qty)
         prepped-quantity (if (and (number? parsed-quantity)
                                   (>= parsed-quantity 0))
                            parsed-quantity
                            0)
-        has-edge-id? edge-id]
-    (when has-edge-id?
-      (d/transact! dsdb [[:db/add edge-id :edge/quantity prepped-quantity]]))))
+        has-recipe-line-item-id? recipe-line-item-id]
+    (when has-recipe-line-item-id?
+      (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
 
 
+(declare create-recipe-line-item!
+         create-recipe-line-items!
+         create-item!
+         create-uom!)
+
+(defn create-uom!
+  [data]
+
+  (let [id (-> data :_id)
+        name (-> data :name)
+        code (-> data :code)
+        ;; type (-> data :type)
+
+        payload {:db/id id
+                 :uom/name name
+                 :uom/code code
+                 #_#_:uom/type type}]
+
+    (d/transact! dsdb [payload])
+    id))
+
+(defn create-recipe-line-item!
+  [data]
+  (let [id (-> data :_id)
+        child-data (-> data :made_of first)
+        uom-code (-> data :measured_in first :code)
+        quantity (-> data :measured_in first :measured_in.quantity)
+
+        child-item-id (create-item! child-data)
+
+        payload {:db/id id
+                 :recipe-line-item/child child-item-id
+                 :recipe-line-item/uom [:uom/code uom-code]
+                 :recipe-line-item/quantity quantity}]
+
+    (d/transact! dsdb [payload])
+    id))
+
+(defn create-recipe-line-items!
+  [recipe-line-items]
+  (mapv create-recipe-line-item! recipe-line-items))
+
+(defn create-item!
+  [data]
+  (let [id (-> data :_id)
+        name (-> data :name)
+        yield (-> data :yield)
+        uom-code (-> data :measured_in first :code)
+        recipe-line-items-data (-> data :made_of)
+        recipe-line-item-ids (create-recipe-line-items! recipe-line-items-data)
+
+        payload {:db/id id
+                 :item/yield yield
+                 :item/uom [:uom/code uom-code]
+                 :item/name name
+                 :item/children recipe-line-item-ids}]
+    (d/transact! dsdb [payload])
+    id))
+
+(defn load-from-remote!
+  [data]
+  (-> data
+      first
+      :value
+      create-item!)
+  (publish {:data "Yes"}))
+
+
+;; Fiddle
+#_(tap> (item-by-name "Chorizo Family Pack"))
+#_(tap> (d/datoms @dsdb :eavt))
+#_(item-by-name "Chorizo Family Pack")
+  ;; => {:id nil, :uom nil, :normalized-cost ##Inf, :name nil}
+
+;; Reset
+(reset-db!)
 
 ;; Setup the DB
 (seed-db)
 
-;; Fiddle
-#_(tap> (node-by-name "Chorizo Wrap"))
-(tap> (d/datoms @dsdb :eavt))
-;; Reset
-#_(reset-db)
+
+
+#_(-> (rc/inline "seed/seed_data.edn")
+      clojure.edn/read-string
+      :item-sample
+      first
+      :value
+      create-item!)
 
 
 #_(def timer
@@ -225,6 +309,6 @@
       (js/setInterval (fn []
                         (js/console.log "hi" @count)
                         (swap! count inc)
-                        (update-edge-quantity! 27 @count)) 1000)))
+                        (update-recipe-line-item-quantity! 27 @count)) 1000)))
 
-;; (update-edge-quantity! 27 20)
+;; (update-recipe-line-item-quantity! 27 20)

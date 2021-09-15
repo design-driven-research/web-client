@@ -1,6 +1,7 @@
 {:source-paths
  ["dev"
-  "src"]
+  "src"
+  "resources"]
 
  :dependencies
  [[cljs-ajax "0.8.3"]
@@ -26,6 +27,7 @@
   [metosin/reitit "0.5.13"]
   [mount "0.1.16"]
   [nrepl "0.8.3"]
+
   [re-frame "1.2.0"]
   [lilactown/autonormal "2.0.0"]
   [org.clojure/core.async "1.3.618"]

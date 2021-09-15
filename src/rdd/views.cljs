@@ -6,10 +6,12 @@
 
 (defn what
   [name]
-  (tap> name)
   (d/transact! db/dsdb [[:db/add [:node/name name] :node/name (str "name - " (random-uuid))]]))
 
 (defn main-panel []
-  (let [node-tree @(r/track db/node-by-name "Chorizo Wrap")]
+  (let [node-tree @(r/track db/item-by-name "Chorizo Family Pack")]
     [:div.main-panel
      [node-view node-tree what]]))
+
+(db/item-by-name "Chorizo Family Pack")
+;; => nil

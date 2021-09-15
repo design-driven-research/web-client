@@ -13,6 +13,7 @@
                  {:type :auto
                   :host "localhost"
                   :port 3000})]
+            (js/console.log "Starting web socket")
             {:chsk chsk
              :ch-receive ch-recv
              :ch-send! send-fn
