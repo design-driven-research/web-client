@@ -2,10 +2,10 @@
 
 (defn item->tree
   [e]
-  (let [has-child-nodes? (:item/children e)
-        has-child-node? (:recipe-line-item/child e)
+  (let [is-item? (:item/children e)
+        is-recipe-line-item? (:recipe-line-item/child e)
 
-        build-node-with-children (fn [node]
+        build-item-with-children (fn [node]
                                    (let [children (mapv item->tree (:item/children node))
                                          id (-> node :db/id)
                                          name (-> node :item/name)
@@ -20,18 +20,18 @@
                                       :normalized-cost normalized-cost
                                       :children children}))
 
-        build-edge (fn [edge]
-                     (let [node (item->tree (:recipe-line-item/child edge))
-                           edge-id (:db/id edge)
-                           quantity (:recipe-line-item/quantity edge)
-                           uom (-> edge :recipe-line-item/uom :uom/code)
-                           total-cost (* quantity (-> node :normalized-cost))]
-                       (merge node {:quantity quantity
-                                    :edge-id edge-id
-                                    :total-cost total-cost
-                                    :uom uom})))
+        build-recipe-line-item (fn [recipe-line-item]
+                                 (let [node (item->tree (:recipe-line-item/child recipe-line-item))
+                                       recipe-line-item-id (:db/id recipe-line-item)
+                                       quantity (:recipe-line-item/quantity recipe-line-item)
+                                       uom (-> recipe-line-item :recipe-line-item/uom :uom/code)
+                                       total-cost (* quantity (-> node :normalized-cost))]
+                                   (merge node {:quantity quantity
+                                                :recipe-line-item-id recipe-line-item-id
+                                                :total-cost total-cost
+                                                :uom uom})))
 
-        build-base-node (fn [node]
+        build-base-item (fn [node]
                           (let [id (-> node :db/id)
                                 name (-> node :item/name)
                                 yield (-> node :item/yield)
@@ -44,8 +44,8 @@
                              :name name}))]
 
     (cond
-      has-child-nodes? (build-node-with-children e)
-      has-child-node? (build-edge e)
-      :default (build-base-node e))))
+      is-item? (build-item-with-children e)
+      is-recipe-line-item? (build-recipe-line-item e)
+      :default (build-base-item e))))
 
 

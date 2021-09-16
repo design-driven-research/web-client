@@ -1,10 +1,10 @@
 (ns rdd.db
-  (:require [datascript.core :as d]
+  (:require [clojure.edn]
+            [datascript.core :as d]
             [rdd.converters.item :refer [item->tree]]
-            [reagent.core :as r]
-            [clojure.edn]
+            [rdd.db.transformers.neo4j :as neo4j-transformer]
             [rdd.services.event-bus :refer [publish!]]
-            [shadow.resource :as rc]))
+            [reagent.core :as r]))
 
 (defn item-schema
   []
@@ -12,9 +12,9 @@
    :item/children {:db/valueType :db.type/ref
                    :db/cardinality :db.cardinality/many
                    :db/isComponent true}
-   #_#_:item/parents {:db/valueType :db.type/ref
-                      :db/cardinality :db.cardinality/many
-                      :db/isComponent true}
+   :item/parents {:db/valueType :db.type/ref
+                  :db/cardinality :db.cardinality/many
+                  :db/isComponent true}
 
    :item/uom {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
 
@@ -213,71 +213,19 @@
     (when has-recipe-line-item-id?
       (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
 
-
-(declare create-recipe-line-item!
-         create-recipe-line-items!
-         create-item!
-         create-uom!)
-
-(defn create-uom!
-  [data]
-
-  (let [id (-> data :_id)
-        name (-> data :name)
-        code (-> data :code)
-        ;; type (-> data :type)
-
-        payload {:db/id id
-                 :uom/name name
-                 :uom/code code
-                 #_#_:uom/type type}]
-
-    (d/transact! dsdb [payload])
-    id))
-
 (defn create-recipe-line-item!
-  [data]
-  (let [id (-> data :_id)
-        child-data (-> data :made_of first)
-        uom-code (-> data :measured_in first :code)
-        quantity (-> data :measured_in first :measured_in.quantity)
-
-        child-item-id (create-item! child-data)
-
-        payload {:db/id id
-                 :recipe-line-item/child child-item-id
-                 :recipe-line-item/uom [:uom/code uom-code]
-                 :recipe-line-item/quantity quantity}]
-
-    (d/transact! dsdb [payload])
-    id))
-
-(defn create-recipe-line-items!
-  [recipe-line-items]
-  (mapv create-recipe-line-item! recipe-line-items))
-
-(defn create-item!
-  [data]
-  (let [id (-> data :_id)
-        name (-> data :name)
-        yield (-> data :yield)
-        uom-code (-> data :measured_in first :code)
-        recipe-line-items-data (-> data :made_of)
-        recipe-line-item-ids (create-recipe-line-items! recipe-line-items-data)
-
-        payload {:db/id id
-                 :item/yield yield
-                 :item/uom [:uom/code uom-code]
-                 :item/name name
-                 :item/children recipe-line-item-ids}]
-    (d/transact! dsdb [payload])
-    id))
+  [parent-item-id child-item-id]
+  (js/console.log parent-item-id child-item-id " parent-item-id child-item-id ")
+  (d/transact! dsdb [[:db/add -1 :recipe-line-item/parent parent-item-id]
+                     [:db/add -1 :recipe-line-item/child child-item-id]
+                     [:db/add -1 :recipe-line-item/quantity 0]
+                     [:db/add parent-item-id :item/children -1]
+                     [:db/add child-item-id :item/parents -1]]))
 
 (defn tree->db!
   [data]
-  (create-item! data)
+  (neo4j-transformer/tree->db! dsdb data)
   (publish! {:topic :remote-db-loaded}))
-
 
 ;; Fiddle
 #_(tap> (item-by-name "Chorizo Family Pack"))
