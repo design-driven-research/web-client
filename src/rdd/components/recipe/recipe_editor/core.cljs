@@ -3,20 +3,16 @@
             ["@ant-design/icons" :refer [DownloadOutlined]]
 
             [helix.dom :as d]
-            ["antd" :refer [Input Select Button]]))
+            ["antd" :refer [Input Select Button Collapse]]))
 (def Option (. Select -Option))
+(def Panel (. Collapse -Panel))
 
 (defnc item-controls
   [{:keys [update-quantity-handler
            create-recipe-line-item-handler]
     {:keys [id name quantity recipe-line-item-id total-cost]} :item :as item}]
   (d/div {:class "flex w-5/12 items-center space-between"}
-         ($ Button {:className "mr-2"
-                    :type "primary"
-                    :onClick (fn []
-                               (create-recipe-line-item-handler id 17))} "Add item")
 
-         (d/span {:class "w-6/12"} (str name " - " total-cost " - " id))
          (d/div {:class "w-6/12"}
                 ($ Input {:className ""
                           :value quantity
@@ -31,18 +27,33 @@
            create-recipe-line-item-handler]
     {:keys [children]} :item}]
 
+
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
   {:wrap [(helix.core/memo =)]}
 
-  (d/div {:class "ml-4"}
-         ($ item-controls {:item item
-                           :create-recipe-line-item-handler create-recipe-line-item-handler
-                           :update-quantity-handler update-quantity-handler})
-         (d/div {:class "mt-2"}
-                (d/div
-                 (for [{:keys [id] :as child} children]
-                   ($ rdd.components.recipe.recipe-editor.core/item
-                      {:key id
-                       :item child
-                       :create-recipe-line-item-handler create-recipe-line-item-handler
-                       :update-quantity-handler update-quantity-handler}))))))
+  (let [has-children? (seq children)
+        item-name (:name item)]
+    (d/div {:class ""}
+
+
+           (d/div {:class "mt-2"}
+                  (when has-children?
+                    ($ Collapse
+                       ($ Panel {:header item-name}
+                          (d/div
+                           ($ item-controls {:item item
+                                             :create-recipe-line-item-handler create-recipe-line-item-handler
+                                             :update-quantity-handler update-quantity-handler})
+                           (d/div
+                            (for [{:keys [id] :as child} children]
+                              ($ rdd.components.recipe.recipe-editor.core/item
+                                 {:key id
+                                  :item child
+                                  :create-recipe-line-item-handler create-recipe-line-item-handler
+                                  :update-quantity-handler update-quantity-handler})))))))))))
+
+
+;; ($ Button {:className "mr-2"
+;;            :type "primary"
+;;            :onClick (fn []
+;;                       (create-recipe-line-item-handler id 17))} "Add item")
