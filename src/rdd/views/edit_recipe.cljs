@@ -28,8 +28,8 @@
                                     :data {:product-name product-name}}))))
 
     ($ :div {:class "p-4"}
-       ($ recipe-editor/item {:item item
-                              :create-recipe-line-item-handler create-recipe-line-item-handler
-                              :update-quantity-handler update-quantity-handler}))))
+       ($ recipe-editor/Editor {:item item
+                                :create-recipe-line-item-handler create-recipe-line-item-handler
+                                :update-quantity-handler update-quantity-handler}))))
 
 

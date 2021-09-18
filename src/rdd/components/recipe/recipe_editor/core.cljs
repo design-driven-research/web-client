@@ -1,56 +1,105 @@
 (ns rdd.components.recipe.recipe-editor.core
   (:require [helix.core :refer [$ defnc]]
-            ["@ant-design/icons" :refer [DownloadOutlined]]
-
+            [rdd.utils.for-indexed :refer [for-indexed]]
+            [helix.hooks :as hooks]
+            ["@ant-design/icons" :refer [DownOutlined RightOutlined]]
             [helix.dom :as d]
             ["antd" :refer [Input Select Button Collapse]]))
+
 (def Option (. Select -Option))
 (def Panel (. Collapse -Panel))
 
-(defnc item-controls
-  [{:keys [update-quantity-handler
-           create-recipe-line-item-handler]
-    {:keys [id name quantity recipe-line-item-id total-cost]} :item :as item}]
-  (d/div {:class "flex w-5/12 items-center space-between"}
+(declare Item Children)
 
-         (d/div {:class "w-6/12"}
-                ($ Input {:className ""
-                          :value quantity
-                          :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))
-                          :addonAfter ($ Select {:className "select-after" :defaultValue "gram"}
-                                         ($ Option {:value "lb"} "lb")
-                                         ($ Option {:value "kg"} "kg"))}))))
-
-(defnc item
+(defnc Editor
   [{:keys [item
            update-quantity-handler
            create-recipe-line-item-handler]
     {:keys [children]} :item}]
 
+  (let [has-children? (seq children)]
+    (d/div {:class "mt-2 w-5/12"}
+           (when has-children?
+             ($ rdd.components.recipe.recipe-editor.core/Children {:item item
+                                                                   :update-quantity-handler update-quantity-handler
+                                                                   :create-recipe-line-item-handler create-recipe-line-item-handler})))))
+
+(defnc Item
+  [{:keys [item
+           index
+           update-quantity-handler
+           create-recipe-line-item-handler]
+    {:keys [id name quantity recipe-line-item-id total-cost children]} :item}]
+
 
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
   {:wrap [(helix.core/memo =)]}
 
-  (let [has-children? (seq children)
-        item-name (:name item)]
-    (d/div {:class ""}
+  (let [[is-open? set-open-state] (hooks/use-state true)
+        has-children? (seq children)]
 
-
-           (d/div {:class "mt-2"}
+    (d/div {:class "item-wrapper flex flex-col"}
+           (d/div {:class "item-header-wrapper flex w-full mt-2 border "}
                   (when has-children?
-                    ($ Collapse
-                       ($ Panel {:header item-name}
-                          (d/div
-                           ($ item-controls {:item item
-                                             :create-recipe-line-item-handler create-recipe-line-item-handler
-                                             :update-quantity-handler update-quantity-handler})
-                           (d/div
-                            (for [{:keys [id] :as child} children]
-                              ($ rdd.components.recipe.recipe-editor.core/item
-                                 {:key id
-                                  :item child
-                                  :create-recipe-line-item-handler create-recipe-line-item-handler
-                                  :update-quantity-handler update-quantity-handler})))))))))))
+                    (d/div {:class "border-r p-2 cursor-pointer"
+                            :onClick (fn []
+                                       (set-open-state (not is-open?)))}
+                           (if is-open?
+                             ($ DownOutlined)
+                             ($ RightOutlined)))
+                    #_($ Button {:className ""
+                                 :size "large"
+                                 :icon (if is-open?
+                                         ($ DownOutlined)
+                                         ($ RightOutlined))
+                                 :onClick (fn []
+                                            (set-open-state (not is-open?)))}))
+                  (d/div {:class "flex items-center space-between w-full p-2"}
+                         (d/div {:class "item-info flex w-full items-center"}
+                                (d/div {:class "flex w-5/12"}
+                                       ($ :span {:class "w-2/12"} (str index "."))
+                                       ($ :span {:class "w-10/12"} name)))
+                         (d/div {:class "item-quantity w-6/12 flex"}
+                                (d/div {:class "mr-2"}
+                                       ($ Input {:value quantity
+                                                 :size "small"
+                                                 :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))}))
+
+                                ($ Select {:defaultValue "lb"
+                                           :size "small"}
+                                   ($ Option {:value "lb"} "lb")
+                                   ($ Option {:value "gr"} "gr")
+                                   ($ Option {:value "kg"} "kg")))))
+
+
+           (when (and has-children?
+                      is-open?)
+             ($ rdd.components.recipe.recipe-editor.core/Children {:item item
+                                                                   :update-quantity-handler update-quantity-handler
+                                                                   :create-recipe-line-item-handler create-recipe-line-item-handler})))))
+
+
+
+
+(defnc Children
+  [{:keys [update-quantity-handler
+           create-recipe-line-item-handler]
+    {:keys [children]} :item}]
+
+  (d/div {:class "flex h-full"}
+         (d/div {:class "w-8 h-full"}
+                (d/div {:class "border-l border-dashed h-full my-2 ml-4"}))
+         (d/div {:class "flex flex-col w-full"}
+                (for-indexed [child index children]
+                             ($ rdd.components.recipe.recipe-editor.core/Item
+                                {:key (:id child)
+                                 :index (inc index)
+                                 :item child
+                                 :create-recipe-line-item-handler create-recipe-line-item-handler
+                                 :update-quantity-handler update-quantity-handler})))))
+
+
+
 
 
 ;; ($ Button {:className "mr-2"
