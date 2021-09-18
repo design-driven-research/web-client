@@ -15,6 +15,13 @@
                                                                        :data {:recipe-line-item-id recipe-line-item-id
                                                                               :quantity quantity
                                                                               :product-name product-name}})))
+
+        update-recipe-line-item-uom (hooks/use-callback :once (fn [recipe-line-item-id uom-code]
+                                                                (dispatch {:type :update-recipe-line-item-uom
+                                                                           :data {:recipe-line-item-id recipe-line-item-id
+                                                                                  :product-name product-name
+                                                                                  :uom-code uom-code}})))
+
         create-recipe-line-item-handler (hooks/use-callback :once (fn [parent-item-id new-item-id]
                                                                     (dispatch {:type :create-recipe-line-item
                                                                                :data {:product-name product-name
@@ -29,7 +36,6 @@
 
     ($ :div {:class "p-4"}
        ($ recipe-editor/Editor {:item item
+                                :update-recipe-line-item-uom update-recipe-line-item-uom
                                 :create-recipe-line-item-handler create-recipe-line-item-handler
                                 :update-quantity-handler update-quantity-handler}))))
-
-

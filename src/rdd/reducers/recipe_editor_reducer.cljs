@@ -4,8 +4,13 @@
 (defn reducer
   [state action]
   (case (:type action)
+
+    :update-recipe-line-item-uom (let [{:keys [recipe-line-item-id uom-code product-name]} (:data action)]
+                                   (db/update-recipe-line-item-uom! recipe-line-item-id uom-code)
+                                   (db/item-by-name product-name))
+
     :update-quantity (let [{:keys [recipe-line-item-id quantity product-name]} (:data action)]
-                       (db/update-recipe-line-item-quantity! recipe-line-item-id quantity)
+                       (db/update-recipe-line-item-uom-quantity! recipe-line-item-id quantity)
                        (db/item-by-name product-name))
     :remote-db-loaded (let [{:keys [product-name]} (:data action)]
                         (db/item-by-name product-name))

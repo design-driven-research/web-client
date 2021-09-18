@@ -202,7 +202,7 @@
   (let [new-name (str (random-uuid))]
     (d/transact! dsdb [[:db/add [:item/name name] :item/name new-name]])))
 
-(defn update-recipe-line-item-quantity!
+(defn update-recipe-line-item-uom-quantity!
   [recipe-line-item-id qty]
   (let [parsed-quantity (js/parseFloat qty)
         prepped-quantity (if (and (number? parsed-quantity)
@@ -212,6 +212,13 @@
         has-recipe-line-item-id? recipe-line-item-id]
     (when has-recipe-line-item-id?
       (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
+
+
+(defn update-recipe-line-item-uom!
+  [recipe-line-item-id uom-code]
+  (let [has-recipe-line-item-id? recipe-line-item-id]
+    (when has-recipe-line-item-id?
+      (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/uom [:uom/code uom-code]]]))))
 
 (defn create-recipe-line-item!
   [parent-item-id child-item-id]
@@ -239,6 +246,8 @@
 ;; Setup the DB
 (seed-db)
 
+(d/listen! dsdb :degub (fn [tx] (tap> tx)))
+
 
 
 #_(-> (rc/inline "seed/seed_data.edn")
@@ -254,6 +263,6 @@
       (js/setInterval (fn []
                         (js/console.log "hi" @count)
                         (swap! count inc)
-                        (update-recipe-line-item-quantity! 27 @count)) 1000)))
+                        (update-recipe-line-item-uom-quantity! 27 @count)) 1000)))
 
-;; (update-recipe-line-item-quantity! 27 20)
+;; (update-recipe-line-item-uom-quantity! 27 20)
