@@ -176,7 +176,8 @@
   ;;  
    ])
 
-(defonce dsdb (atom (d/empty-db (schema))))
+(defonce dsdb (atom (d/empty-db (schema))
+                    :meta {:listeners (atom {})}))
 
 (defn seed-db
   "Seed the db with data"
@@ -229,8 +230,7 @@
 
 (defn tree->db!
   [data]
-  (neo4j-transformer/tree->db! dsdb data)
-  (publish! {:topic :remote-db-loaded}))
+  (neo4j-transformer/tree->db! dsdb data))
 
 ;; Fiddle
 #_(tap> (item-by-name "Chorizo Family Pack"))
@@ -243,6 +243,9 @@
 
 ;; Setup the DB
 (seed-db)
+
+(d/listen! dsdb :default (fn [] (publish! {:topic :db-updated})))
+
 
 ;; (d/listen! dsdb :degub (fn [tx] (tap> tx)))
 

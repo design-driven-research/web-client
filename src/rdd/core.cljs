@@ -3,6 +3,7 @@
             [mount.core :as mount]
             [rdd.components.nav-bar.main :refer [nav-bar]]
             [rdd.services.syncer]
+            [rdd.subscriptions.item]
             [rdd.views.edit-recipe :as erv]
             ["react-dom" :as rdom]
             ["@blueprintjs/core" :refer [HotkeysProvider]]))

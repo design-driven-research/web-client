@@ -108,10 +108,15 @@
 
            (when (and has-children?
                       is-open?)
-             ($ rdd.components.recipe.recipe-editor.core/Children {:item item
-                                                                   :update-quantity-handler update-quantity-handler
-                                                                   :update-recipe-line-item-uom update-recipe-line-item-uom
-                                                                   :create-recipe-line-item-handler create-recipe-line-item-handler})))))
+             ($ :div
+                ($ Button {:minimal true
+                           :icon "chevron-down"
+                           :onClick (fn []
+                                      (create-recipe-line-item-handler id 17))})
+                ($ rdd.components.recipe.recipe-editor.core/Children {:item item
+                                                                      :update-quantity-handler update-quantity-handler
+                                                                      :update-recipe-line-item-uom update-recipe-line-item-uom
+                                                                      :create-recipe-line-item-handler create-recipe-line-item-handler}))))))
 
 
 
@@ -138,11 +143,6 @@
 
 
 
-
-;; ($ Button {:className "mr-2"
-;;            :type "primary"
-;;            :onClick (fn []
-;;                       (create-recipe-line-item-handler id 17))} "Add item")
 
 
 ;; ($ Select {:value uom
