@@ -89,10 +89,10 @@
                             :onClick (fn []
                                        (set-open-state (not is-open?)))}
                            (if is-open?
-                             ($ Button {:icon "chevron-right"
+                             ($ Button {:icon "chevron-down"
                                         :minimal true})
 
-                             ($ Button {:icon "chevron-down"
+                             ($ Button {:icon "chevron-right"
                                         :minimal true}))))
                   (d/div {:class "flex items-center space-between w-full p-2"}
                          (d/div {:class "item-info flex w-full items-center"}

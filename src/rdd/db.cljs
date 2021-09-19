@@ -3,8 +3,7 @@
             [datascript.core :as d]
             [rdd.converters.item :refer [item->tree]]
             [rdd.db.transformers.neo4j :as neo4j-transformer]
-            [rdd.services.event-bus :refer [publish!]]
-            [reagent.core :as r]))
+            [rdd.services.event-bus :refer [publish!]]))
 
 (defn item-schema
   []
@@ -177,8 +176,7 @@
   ;;  
    ])
 
-(defonce dsdb (r/atom (d/empty-db (schema))
-                      :meta {:listeners (atom {})}))
+(defonce dsdb (atom (d/empty-db (schema))))
 
 (defn seed-db
   "Seed the db with data"
@@ -246,7 +244,9 @@
 ;; Setup the DB
 (seed-db)
 
-(d/listen! dsdb :degub (fn [tx] (tap> tx)))
+;; (d/listen! dsdb :degub (fn [tx] (tap> tx)))
+
+
 
 
 

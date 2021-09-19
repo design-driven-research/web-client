@@ -52,10 +52,6 @@
     ($ :div {:class "p-4"
              :onKeyDown handleKeyDown
              :onKeyUp handleKeyUp}
-       ($ Button {:icon "refresh"
-                  :intent "danger"
-                  :text "Reset"
-                  :onClick (fn [e] (js/console.log e))})
        ($ recipe-editor/Editor {:item item
                                 :update-recipe-line-item-uom update-recipe-line-item-uom
                                 :create-recipe-line-item-handler create-recipe-line-item-handler
