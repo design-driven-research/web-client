@@ -1,6 +1,8 @@
 (ns rdd.views.edit-recipe
   (:require
    [helix.core :refer [$ defnc]]
+   ["@blueprintjs/core" :as hey :refer [Button Icon useHotkeys]]
+
    [helix.hooks :as hooks]
    [rdd.components.recipe.recipe-editor.core :as recipe-editor]
    [rdd.reducers.recipe-editor-reducer :as rer]
@@ -10,6 +12,19 @@
 (defnc view
   [{:keys [product-name]}]
   (let [[item dispatch] (hooks/use-reducer rer/reducer (db/item-by-name product-name))
+
+        hotkeys (hooks/use-memo :once (clj->js [{:combo "Shift + B"
+                                                 :global true
+                                                 :label "Refresh"
+                                                 :onKeyDown (fn [e] (js/console.log "Pressed B " e))}
+
+                                                {:combo "C"
+                                                 :global true
+                                                 :label "Yo son"
+                                                 :onKeyDown (fn [e] (js/console.log "Pressed C " e))}]))
+
+        {:keys [handleKeyDown handleKeyUp]} (useHotkeys hotkeys)
+
         update-quantity-handler (hooks/use-callback :once (fn [recipe-line-item-id quantity]
                                                             (dispatch {:type :update-quantity
                                                                        :data {:recipe-line-item-id recipe-line-item-id
@@ -34,7 +49,13 @@
                          (dispatch {:type :remote-db-loaded
                                     :data {:product-name product-name}}))))
 
-    ($ :div {:class "p-4"}
+    ($ :div {:class "p-4"
+             :onKeyDown handleKeyDown
+             :onKeyUp handleKeyUp}
+       ($ Button {:icon "refresh"
+                  :intent "danger"
+                  :text "Reset"
+                  :onClick (fn [e] (js/console.log e))})
        ($ recipe-editor/Editor {:item item
                                 :update-recipe-line-item-uom update-recipe-line-item-uom
                                 :create-recipe-line-item-handler create-recipe-line-item-handler

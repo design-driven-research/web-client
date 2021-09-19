@@ -4,12 +4,13 @@
             [rdd.components.nav-bar.main :refer [nav-bar]]
             [rdd.services.syncer]
             [rdd.views.edit-recipe :as erv]
-            ["react-dom" :as rdom]))
+            ["react-dom" :as rdom]
+            ["@blueprintjs/core" :refer [HotkeysProvider]]))
 
 (defnc app []
-  ($ :div
-     ($ nav-bar)
-     ($ erv/view {:product-name "Chorizo Family Pack"})))
+  ($ HotkeysProvider ($ :div
+                        ($ nav-bar)
+                        ($ erv/view {:product-name "Chorizo Family Pack"}))))
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))
 

@@ -1,13 +1,12 @@
 (ns rdd.components.recipe.recipe-editor.core
-  (:require [helix.core :refer [$ defnc]]
-            [rdd.utils.for-indexed :refer [for-indexed]]
-            [helix.hooks :as hooks]
-            ["@ant-design/icons" :refer [DownOutlined RightOutlined]]
+  (:require ["@blueprintjs/core" :refer [Button InputGroup MenuItem]]
+            ["@blueprintjs/select" :refer [Select]]
+            [applied-science.js-interop :as j]
+            [helix.core :refer [$ defnc]]
             [helix.dom :as d]
-            ["antd" :refer [Input Select Button Collapse]]))
+            [helix.hooks :as hooks]
+            [rdd.utils.for-indexed :refer [for-indexed]]))
 
-(def Option (. Select -Option))
-(def Panel (. Collapse -Panel))
 
 (declare Item Children)
 
@@ -26,24 +25,48 @@
                                                                    :update-recipe-line-item-uom update-recipe-line-item-uom
                                                                    :create-recipe-line-item-handler create-recipe-line-item-handler})))))
 
+
 (defnc UsageControls
   [{:keys [quantity
            recipe-line-item-id
            update-quantity-handler
            update-recipe-line-item-uom
            uom]}]
-  (d/div {:class "item-quantity w-6/12 flex"}
-         (d/div {:class "mr-2"}
-                ($ Input {:value quantity
-                          :size "small"
-                          :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))}))
-         ($ Select {:value uom
-                    :size "small"
-                    :onChange #(update-recipe-line-item-uom recipe-line-item-id %)}
-            ($ Option {:value "lb"} "lb")
-            ($ Option {:value "gr"} "gr")
-            ($ Option {:value "ea"} "ea")
-            ($ Option {:value "kg"} "kg"))))
+
+  (let [uom-selected-handler (hooks/use-callback :once (fn [uom]
+                                                         (update-recipe-line-item-uom recipe-line-item-id (.. uom -title))))
+
+        uomRenderer (hooks/use-memo :once (fn [item opts]
+                                            (j/let [^js {:keys [title]} item]
+                                              ($ MenuItem {:onClick (fn [_] (uom-selected-handler item))
+                                                           :active (j/get-in opts [:modifiers :active])
+                                                           :key title
+                                                           :text title}))))
+
+        pred-filter (hooks/use-memo :once (fn [query film index exactMatch]
+                                            (if (empty? query)
+                                              true
+                                              (re-find (re-pattern query) (.. film -title)))))]
+    (d/div {:class "item-quantity w-6/12 flex items-center"}
+           (d/div {:class "mr-2"}
+                  ($ InputGroup {:value quantity
+                                 :small true
+                                 :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))}))
+           (d/div {:class "border-2"}
+
+                  ($ Select {:popoverProps (j/lit {:minimal true})
+                             :itemRenderer uomRenderer
+                             :itemPredicate pred-filter
+                             :onItemSelect uom-selected-handler
+                             :tagRenderer (fn [item]
+                                            (:title item))
+                             :items (j/lit [{:title "gr"}
+                                            {:title "lb"}])}
+                     ($ Button {:text uom
+                                :small true
+                                :minimal true
+                                :rightIcon "double-caret-vertical"}))))))
+
 
 (defnc Item
   [{:keys [item
@@ -52,7 +75,6 @@
            update-recipe-line-item-uom
            create-recipe-line-item-handler]
     {:keys [id name quantity recipe-line-item-id uom total-cost children]} :item}]
-
 
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
   {:wrap [(helix.core/memo =)]}
@@ -67,8 +89,11 @@
                             :onClick (fn []
                                        (set-open-state (not is-open?)))}
                            (if is-open?
-                             ($ DownOutlined)
-                             ($ RightOutlined))))
+                             ($ Button {:icon "chevron-right"
+                                        :minimal true})
+
+                             ($ Button {:icon "chevron-down"
+                                        :minimal true}))))
                   (d/div {:class "flex items-center space-between w-full p-2"}
                          (d/div {:class "item-info flex w-full items-center"}
                                 (d/div {:class "flex w-5/12"}
@@ -118,3 +143,25 @@
 ;;            :type "primary"
 ;;            :onClick (fn []
 ;;                       (create-recipe-line-item-handler id 17))} "Add item")
+
+
+;; ($ Select {:value uom
+;;            :size "small"
+;;            :onChange #(update-recipe-line-item-uom recipe-line-item-id %)}
+;;    ($ Option {:value "lb"} "lb")
+;;    ($ Option {:value "gr"} "gr")
+;;    ($ Option {:value "ea"} "ea")
+;;    ($ Option {:value "kg"} "kg"))
+
+
+
+;; export const filterFilm: ItemPredicate<IFilm> = (query, film, _index, exactMatch) => {
+;;     const normalizedTitle = film.title.toLowerCase();
+;;     const normalizedQuery = query.toLowerCase();
+
+;;     if (exactMatch) {
+;;         return normalizedTitle === normalizedQuery;
+;;     } else {
+;;         return `${film.rank}. ${normalizedTitle} ${film.year}`.indexOf(normalizedQuery) >= 0;
+;;     }
+;; };

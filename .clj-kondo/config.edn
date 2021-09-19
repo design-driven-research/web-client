@@ -2,6 +2,7 @@
  :hooks
  {:analyze-call {rdd.utils.for-indexed/for-indexed hooks.for-indexed/for-indexed}}
 
- :lint-as {helix.core/defnc clojure.core/defn
+ :lint-as {applied-science.js-interop/let clojure.core/let
+           helix.core/defnc clojure.core/defn
            rdd.hello/inc-builder clojure.core/declare
            mount.core/defstate clojure.core/def}}
