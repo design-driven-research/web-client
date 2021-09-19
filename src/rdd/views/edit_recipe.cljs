@@ -8,13 +8,15 @@
    [rdd.reducers.recipe-editor-reducer :as rer]
    [rdd.db :as db]
    [rdd.hooks.use-item :refer [use-item]]
+   [rdd.hooks.use-item-reducer :refer [use-item-reducer]]
    [rdd.hooks.use-dispatch :refer [use-dispatch]]
    [rdd.services.event-bus :refer [subscribe! publish!]]))
 
 (defnc view
   [{:keys [product-name]}]
-  (let [[item] (use-item product-name)
-        #_#_[_ dispatch] (hooks/use-reducer rer/reducer (db/item-by-name product-name))
+  (let [#_#_[item] (use-item product-name)
+        #_#_[item dispatch] (hooks/use-reducer rer/reducer (db/item-by-name product-name))
+        {:keys [item dispatch! builder]} (use-item-reducer product-name)
 
         hotkeys (hooks/use-memo :once (clj->js [{:combo "Shift + B"
                                                  :global true
@@ -28,9 +30,13 @@
 
         {:keys [handleKeyDown handleKeyUp]} (useHotkeys hotkeys)
 
-        update-quantity-handler (use-dispatch :update-recipe-line-item-quantity [product-name])
-        update-recipe-line-item-uom (use-dispatch :update-recipe-line-item-uom [product-name])
-        create-recipe-line-item-handler (use-dispatch :create-recipe-line-item [product-name])
+        update-quantity-handler (builder :update-quantity [product-name])
+        update-recipe-line-item-uom (builder :update-recipe-line-item-uom [product-name])
+        create-recipe-line-item-handler (builder :create-recipe-line-item [product-name])
+
+        #_#_update-quantity-handler (use-dispatch :update-recipe-line-item-quantity [product-name])
+        #_#_update-recipe-line-item-uom (use-dispatch :update-recipe-line-item-uom [product-name])
+        #_#_create-recipe-line-item-handler (use-dispatch :create-recipe-line-item [product-name])
         #_#_update-quantity-handler (hooks/use-callback [product-name] (fn [recipe-line-item-id quantity]
                                                                          (dispatch {:type :update-quantity
                                                                                     :data {:recipe-line-item-id recipe-line-item-id
@@ -49,6 +55,13 @@
                                                                                                    :parent-item-id parent-item-id
                                                                                                    :new-item-id new-item-id}})))]
 
+    (hooks/use-effect [product-name]
+                      (subscribe!
+                       :remote-db-loaded
+                       (fn [_]
+                         (dispatch! {:topic :remote-db-loaded
+                                     :product-name product-name
+                                     :data {}}))))
 
     ($ :div {:class "p-4"
              :onKeyDown handleKeyDown

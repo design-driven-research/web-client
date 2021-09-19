@@ -1,20 +1,23 @@
 (ns rdd.reducers.recipe-editor-reducer
-  (:require [rdd.db :as db]))
+  (:require [rdd.db :as db]
+            [applied-science.js-interop :as j]))
 
 (defn reducer
-  [state action]
-  (case (:type action)
+  [state payload]
 
-    :update-recipe-line-item-uom (let [{:keys [recipe-line-item-id uom-code product-name]} (:data action)]
-                                   (db/update-recipe-line-item-uom! recipe-line-item-id uom-code)
-                                   (db/item-by-name product-name))
+  (let [{:keys [product-name data topic]} payload]
+    (case topic
 
-    :update-quantity (let [{:keys [recipe-line-item-id quantity product-name]} (:data action)]
-                       (db/update-recipe-line-item-uom-quantity! recipe-line-item-id quantity)
-                       (db/item-by-name product-name))
-    :remote-db-loaded (let [{:keys [product-name]} (:data action)]
-                        (db/item-by-name product-name))
-    :create-recipe-line-item (let [{:keys [product-name parent-item-id new-item-id]} (:data action)]
-                               (js/console.log parent-item-id new-item-id)
-                               (db/create-recipe-line-item! parent-item-id new-item-id)
-                               (db/item-by-name product-name))))
+      :update-recipe-line-item-uom (let [[recipe-line-item-id uom-code] data]
+                                     (db/update-recipe-line-item-uom! recipe-line-item-id uom-code)
+                                     (db/item-by-name product-name))
+
+      :update-quantity (let [[recipe-line-item-id quantity] data]
+                         (db/update-recipe-line-item-uom-quantity! recipe-line-item-id quantity)
+                         (db/item-by-name product-name))
+
+      :remote-db-loaded (db/item-by-name product-name)
+
+      :create-recipe-line-item (let [[parent-item-id new-item-id] data]
+                                 (db/create-recipe-line-item! parent-item-id new-item-id)
+                                 (db/item-by-name product-name)))))

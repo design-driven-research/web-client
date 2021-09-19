@@ -230,7 +230,8 @@
 
 (defn tree->db!
   [data]
-  (neo4j-transformer/tree->db! dsdb data))
+  (neo4j-transformer/tree->db! dsdb data)
+  (publish! {:topic :remote-db-loaded}))
 
 ;; Fiddle
 #_(tap> (item-by-name "Chorizo Family Pack"))
