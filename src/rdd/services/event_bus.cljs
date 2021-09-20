@@ -1,13 +1,14 @@
 (ns rdd.services.event-bus
   (:require-macros
+   [mount.core :refer [defstate]]
    [cljs.core.async.macros :refer (go)])
   (:require
-   [mount.core :refer [defstate]]
+
    [cljs.core.async :refer [chan <! put! close!]]))
 
 (declare process-queue)
 
-(defstate bus
+(defstate ^{:on-reload :noop} bus
   :start (let [c (chan)]
            (js/console.log "Starting event bus")
            c))
@@ -16,7 +17,7 @@
 
 (defn- unsubscribe!
   [id]
-  (js/console.log (str "Unsubscribing" id))
+  (js/console.log "Unsubscribing " id)
   (swap! subscriptions (fn [subs]
                          (filter (fn [sub] (not= (:id sub) id)) subs))))
 

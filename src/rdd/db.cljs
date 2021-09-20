@@ -1,7 +1,8 @@
 (ns rdd.db
+  (:require-macros
+   [mount.core :refer [defstate]])
   (:require [clojure.edn]
             [datascript.core :as d]
-            [mount.core :refer [defstate]]
             [rdd.converters.item :refer [item->tree]]
             [rdd.db.transformers.neo4j :as neo4j-transformer]
             [rdd.services.event-bus :refer [publish!]]))
@@ -179,12 +180,14 @@
 
 (declare reset-db! seed-db)
 
-(defstate dsdb
-  :start (let [db (atom (d/empty-db (schema))
-                        :meta {:listeners (atom {})})]
-           (reset-db! db)
-           (seed-db db)
-           db))
+(defstate ^{:on-reload :noop} dsdb
+  :start (do
+           (js/console.log "Recreating dsdb")
+           (let [db (atom (d/empty-db (schema))
+                          :meta {:listeners (atom {})})]
+             (reset-db! db)
+             (seed-db db)
+             db)))
 
 (defn seed-db
   "Seed the db with data"
@@ -200,14 +203,15 @@
 
 (defn item-by-name
   [name]
-  (let [item (d/entity @dsdb [:item/name name])]
+  (tap> @@dsdb)
+  (let [item (d/entity @@dsdb [:item/name name])]
     (when item
       (item->tree item))))
 
 (defn update-item-name!
   [name]
   (let [new-name (str (random-uuid))]
-    (d/transact! dsdb [[:db/add [:item/name name] :item/name new-name]])))
+    (d/transact! @dsdb [[:db/add [:item/name name] :item/name new-name]])))
 
 (defn update-recipe-line-item-uom-quantity!
   [recipe-line-item-id qty]
@@ -218,23 +222,23 @@
                            0)
         has-recipe-line-item-id? recipe-line-item-id]
     (when has-recipe-line-item-id?
-      (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
+      (d/transact! @dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
 
 
 (defn update-recipe-line-item-uom!
   [recipe-line-item-id uom-code]
   (let [has-recipe-line-item-id? recipe-line-item-id]
     (when has-recipe-line-item-id?
-      (d/transact! dsdb [[:db/add recipe-line-item-id :recipe-line-item/uom [:uom/code uom-code]]]))))
+      (d/transact! @dsdb [[:db/add recipe-line-item-id :recipe-line-item/uom [:uom/code uom-code]]]))))
 
 (defn create-recipe-line-item!
   [parent-item-id child-item-id]
   (js/console.log parent-item-id child-item-id " parent-item-id child-item-id ")
-  (d/transact! dsdb [[:db/add -1 :recipe-line-item/parent parent-item-id]
-                     [:db/add -1 :recipe-line-item/child child-item-id]
-                     [:db/add -1 :recipe-line-item/quantity 0]
-                     [:db/add parent-item-id :item/children -1]
-                     [:db/add child-item-id :item/parents -1]]))
+  (d/transact! @dsdb [[:db/add -1 :recipe-line-item/parent parent-item-id]
+                      [:db/add -1 :recipe-line-item/child child-item-id]
+                      [:db/add -1 :recipe-line-item/quantity 0]
+                      [:db/add parent-item-id :item/children -1]
+                      [:db/add child-item-id :item/parents -1]]))
 
 (defn tree->db!
   [data]

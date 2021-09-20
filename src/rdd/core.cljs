@@ -14,29 +14,24 @@
 
 (defnc app []
   (let [product-name "Chorizo Family Pack"]
-    (hooks/use-effect
-     :once
-     (js/console.log "loading product")
-     (store/item-by-name product-name))
-
     ($ HotkeysProvider ($ :div
                           ($ nav-bar)
-                          #_($ erv/view {:product-name product-name})))))
+                          ($ erv/view {:product-name product-name})))))
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))
 
 (defn ^:dev/after-load start
   []
-  (js/console.log "Start")
-  (mount/start)
+  (js/console.log "Calling start")
   (.render root ($ app)))
 
-(defn ^:dev/before-load stop
-  []
-  (js/console.log "Stop")
-  (mount/stop))
+#_(defn ^:dev/before-load stop
+    []
+    (js/console.log "Reload")
+    #_(mount/stop))
 
-(defn ^:dev/after-load init!
+(defn init!
   []
-  (js/console.log "Init!")
+  (js/console.log "Calling init")
+  (mount/start)
   (start))

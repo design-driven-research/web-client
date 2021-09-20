@@ -62,7 +62,5 @@
     id))
 
 (defn tree->db!
-  [db data]
-  (tap> db)
-  (tap> data)
-  (create-item! db data))
+  [conn data]
+  (create-item! conn data))

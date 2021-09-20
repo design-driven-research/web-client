@@ -53,7 +53,6 @@
                                  :small true
                                  :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))}))
            (d/div {:class "border-2"}
-
                   ($ Select {:popoverProps (j/lit {:minimal true})
                              :itemRenderer uomRenderer
                              :itemPredicate pred-filter
