@@ -5,7 +5,7 @@
    [mount.core :refer [defstate]]
    [taoensso.sente :as sente :refer (cb-success?)]))
 
-(defstate conn
+(defstate ^{:on-reload :noop} conn
   :start  (let [{:keys [chsk ch-recv send-fn state]}
                 (sente/make-channel-socket-client!
                  "/chsk"

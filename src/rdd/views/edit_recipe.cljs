@@ -56,12 +56,13 @@
                                                                                                    :parent-item-id parent-item-id
                                                                                                    :new-item-id new-item-id}})))]
 
-    (hooks/use-effect [product-name]
-                      (subscribe!
-                       :remote-db-loaded
-                       (fn [_]
-                         (dispatch!
-                          [:remote-db-loaded]))))
+    #_(hooks/use-effect [product-name]
+                        ((subscribe!
+                          :remote-db-loaded
+                          (fn [_]
+                            (js/console.log "Dispatching remote db load")
+                            (dispatch!
+                             [:remote-db-loaded])))))
 
 
 

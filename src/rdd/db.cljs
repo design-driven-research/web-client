@@ -1,6 +1,7 @@
 (ns rdd.db
   (:require [clojure.edn]
             [datascript.core :as d]
+            [mount.core :refer [defstate]]
             [rdd.converters.item :refer [item->tree]]
             [rdd.db.transformers.neo4j :as neo4j-transformer]
             [rdd.services.event-bus :refer [publish!]]))
@@ -176,19 +177,26 @@
   ;;  
    ])
 
-(defonce dsdb (atom (d/empty-db (schema))
-                    :meta {:listeners (atom {})}))
+(declare reset-db! seed-db)
+
+(defstate dsdb
+  :start (let [db (atom (d/empty-db (schema))
+                        :meta {:listeners (atom {})})]
+           (reset-db! db)
+           (seed-db db)
+           db))
 
 (defn seed-db
   "Seed the db with data"
-  []
-  (d/transact! dsdb (unit-systems-data))
-  (d/transact! dsdb (uom-data))
-  #_(d/transact! dsdb (seed-base-data)))
+  [db]
+
+  (d/transact! db (unit-systems-data))
+  (d/transact! db (uom-data))
+  #_(d/transact! db (seed-base-data)))
 
 (defn reset-db!
-  []
-  (d/reset-conn! dsdb (d/empty-db (schema))))
+  [db]
+  (d/reset-conn! db (d/empty-db (schema))))
 
 (defn item-by-name
   [name]
@@ -230,7 +238,7 @@
 
 (defn tree->db!
   [data]
-  (neo4j-transformer/tree->db! dsdb data)
+  (neo4j-transformer/tree->db! @dsdb data)
   (publish! {:topic :remote-db-loaded}))
 
 ;; Fiddle
@@ -239,13 +247,15 @@
 #_(item-by-name "Chorizo Family Pack")
   ;; => {:id nil, :uom nil, :normalized-cost ##Inf, :name nil}
 
+
+
 ;; Reset
-(reset-db!)
+
 
 ;; Setup the DB
-(seed-db)
 
-(d/listen! dsdb :default (fn [] (publish! {:topic :db-updated})))
+
+;; (d/listen! dsdb :default (fn [] (publish! {:topic :db-updated})))
 
 
 ;; (d/listen! dsdb :degub (fn [tx] (tap> tx)))

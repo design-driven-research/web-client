@@ -10,8 +10,7 @@
 (defstate bus
   :start (let [c (chan)]
            (js/console.log "Starting event bus")
-           c)
-  :stop (close! bus))
+           c))
 
 (defonce subscriptions (atom []))
 
