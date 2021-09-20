@@ -5,21 +5,19 @@
 
 (defn use-item-reducer
   [product-name]
-  (let [[state dispatch!] (hooks/use-reducer rer/reducer (db/item-by-name product-name))
-
+  (let [initial-state {:current-product-name product-name
+                       :item (db/item-by-name product-name)}
+        [state dispatch!] (hooks/use-reducer rer/reducer initial-state)
         builder (fn [topic invalidation-keys & {:keys [middleware]}]
                   (hooks/use-callback
                    invalidation-keys
                    (fn [& args]
-                     (let [data (if middleware
-                                  (apply middleware args)
-                                  args)
-                           payload {:topic topic
-                                    :product-name product-name
-                                    :data data}]
-                       (dispatch! payload)))))]
+                     (let [payload (if middleware
+                                     (apply middleware args)
+                                     args)]
+                       (dispatch! [topic payload])))))]
 
-    {:item state
+    {:state state
      :dispatch! dispatch!
      :builder builder}))
 

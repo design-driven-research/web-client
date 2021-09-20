@@ -16,7 +16,8 @@
   [{:keys [product-name]}]
   (let [#_#_[item] (use-item product-name)
         #_#_[item dispatch] (hooks/use-reducer rer/reducer (db/item-by-name product-name))
-        {:keys [item dispatch! builder]} (use-item-reducer product-name)
+        {:keys [state dispatch! builder]} (use-item-reducer product-name)
+        item (-> state :item)
 
         hotkeys (hooks/use-memo :once (clj->js [{:combo "Shift + B"
                                                  :global true
@@ -59,9 +60,10 @@
                       (subscribe!
                        :remote-db-loaded
                        (fn [_]
-                         (dispatch! {:topic :remote-db-loaded
-                                     :product-name product-name
-                                     :data {}}))))
+                         (dispatch!
+                          [:remote-db-loaded]))))
+
+
 
     ($ :div {:class "p-4"
              :onKeyDown handleKeyDown
