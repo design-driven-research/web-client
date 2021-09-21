@@ -14,7 +14,7 @@
   [{:keys [item
            update-quantity-handler
            update-recipe-line-item-uom
-           create-recipe-line-item-handler]
+           create-recipe-line-item]
     {:keys [children]} :item}]
 
   (let [has-children? (seq children)]
@@ -23,7 +23,7 @@
              ($ rdd.components.recipe.recipe-editor.core/Children {:item item
                                                                    :update-quantity-handler update-quantity-handler
                                                                    :update-recipe-line-item-uom update-recipe-line-item-uom
-                                                                   :create-recipe-line-item-handler create-recipe-line-item-handler})))))
+                                                                   :create-recipe-line-item create-recipe-line-item})))))
 
 
 (defnc UsageControls
@@ -66,13 +66,12 @@
                                 :minimal true
                                 :rightIcon "double-caret-vertical"}))))))
 
-
 (defnc Item
   [{:keys [item
            index
            update-quantity-handler
            update-recipe-line-item-uom
-           create-recipe-line-item-handler]
+           create-recipe-line-item]
     {:keys [id name quantity recipe-line-item-id uom total-cost children]} :item}]
 
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
@@ -97,33 +96,30 @@
                          (d/div {:class "item-info flex w-full items-center"}
                                 (d/div {:class "flex w-5/12"}
                                        ($ :span {:class "w-2/12"} (str index "."))
-                                       ($ :span {:class "w-10/12"} name)))
+                                       ($ :span {:class "w-10/12"} name)
+                                       ($ Button {:text "Add"
+                                                  :onClick (fn []
+                                                             (create-recipe-line-item id 17))})))
                          ($ UsageControls {:update-quantity-handler update-quantity-handler
                                            :update-recipe-line-item-uom update-recipe-line-item-uom
                                            :recipe-line-item-id recipe-line-item-id
                                            :quantity quantity
                                            :uom uom})))
 
-
            (when (and has-children?
                       is-open?)
              ($ :div
-                ($ Button {:minimal true
-                           :icon "chevron-down"
-                           :onClick (fn []
-                                      (create-recipe-line-item-handler id 17))})
                 ($ rdd.components.recipe.recipe-editor.core/Children {:item item
                                                                       :update-quantity-handler update-quantity-handler
                                                                       :update-recipe-line-item-uom update-recipe-line-item-uom
-                                                                      :create-recipe-line-item-handler create-recipe-line-item-handler}))))))
-
+                                                                      :create-recipe-line-item create-recipe-line-item}))))))
 
 
 
 (defnc Children
   [{:keys [update-quantity-handler
            update-recipe-line-item-uom
-           create-recipe-line-item-handler]
+           create-recipe-line-item]
     {:keys [children]} :item}]
 
   (d/div {:class "flex h-full"}
@@ -135,32 +131,8 @@
                                 {:key (:id child)
                                  :index (inc index)
                                  :item child
-                                 :create-recipe-line-item-handler create-recipe-line-item-handler
+                                 :create-recipe-line-item create-recipe-line-item
                                  :update-recipe-line-item-uom update-recipe-line-item-uom
                                  :update-quantity-handler update-quantity-handler})))))
 
 
-
-
-
-
-;; ($ Select {:value uom
-;;            :size "small"
-;;            :onChange #(update-recipe-line-item-uom recipe-line-item-id %)}
-;;    ($ Option {:value "lb"} "lb")
-;;    ($ Option {:value "gr"} "gr")
-;;    ($ Option {:value "ea"} "ea")
-;;    ($ Option {:value "kg"} "kg"))
-
-
-
-;; export const filterFilm: ItemPredicate<IFilm> = (query, film, _index, exactMatch) => {
-;;     const normalizedTitle = film.title.toLowerCase();
-;;     const normalizedQuery = query.toLowerCase();
-
-;;     if (exactMatch) {
-;;         return normalizedTitle === normalizedQuery;
-;;     } else {
-;;         return `${film.rank}. ${normalizedTitle} ${film.year}`.indexOf(normalizedQuery) >= 0;
-;;     }
-;; };

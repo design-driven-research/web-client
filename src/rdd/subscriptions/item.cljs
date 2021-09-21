@@ -5,7 +5,7 @@
 (subscribe!
  :update-recipe-line-item-quantity
  (fn [[recipe-line-item-id quantity]]
-   (db/update-recipe-line-item-uom-quantity! recipe-line-item-id quantity)))
+   (db/update-recipe-line-item-quantity! recipe-line-item-id quantity)))
 
 (subscribe!
  :update-recipe-line-item-uom

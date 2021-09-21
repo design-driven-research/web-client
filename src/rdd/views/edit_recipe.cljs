@@ -23,9 +23,9 @@
 
         {:keys [handleKeyDown handleKeyUp]} (useHotkeys hotkeys)
 
-        update-quantity-handler (builder :update-quantity [product-name])
+        update-quantity-handler (builder :update-recipe-line-item-quantity [product-name])
         update-recipe-line-item-uom (builder :update-recipe-line-item-uom [product-name])
-        create-recipe-line-item-handler (builder :create-recipe-line-item [product-name])]
+        create-recipe-line-item (builder :create-recipe-line-item [product-name])]
 
     (hooks/use-effect :once
                       (subscribe!
@@ -39,5 +39,5 @@
              :onKeyUp handleKeyUp}
        ($ recipe-editor/Editor {:item item
                                 :update-recipe-line-item-uom update-recipe-line-item-uom
-                                :create-recipe-line-item-handler create-recipe-line-item-handler
+                                :create-recipe-line-item create-recipe-line-item
                                 :update-quantity-handler update-quantity-handler}))))

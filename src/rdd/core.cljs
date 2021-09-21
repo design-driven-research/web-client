@@ -2,12 +2,12 @@
   (:require [helix.core :refer [$ defnc]]
             [mount.core :as mount]
             [rdd.components.nav-bar.main :refer [nav-bar]]
-            [rdd.services.web-socket :as ws]
-            [rdd.db :as db]
+            [rdd.services.web-socket]
+            [rdd.db]
             [rdd.services.syncer]
-            [helix.hooks :as hooks]
+            [helix.hooks]
             [rdd.subscriptions.item]
-            [rdd.services.store :as store]
+            [rdd.services.store]
             [rdd.views.edit-recipe :as erv]
             ["react-dom" :as rdom]
             ["@blueprintjs/core" :refer [HotkeysProvider]]))
@@ -24,11 +24,6 @@
   []
   (js/console.log "Calling start")
   (.render root ($ app)))
-
-#_(defn ^:dev/before-load stop
-    []
-    (js/console.log "Reload")
-    #_(mount/stop))
 
 (defn init!
   []
