@@ -8,13 +8,15 @@
         build-item-with-children (fn [node]
                                    (let [children (mapv item->tree (:item/children node))
                                          id (-> node :db/id)
+                                         uuid (-> node :item/uuid)
                                          name (-> node :item/name)
                                          yield (-> node :item/yield)
                                          total-children-cost (->> children
                                                                   (map :total-cost)
                                                                   (reduce +))
                                          normalized-cost (or (/ total-children-cost yield) 1)]
-                                     {:id id
+                                     {:uuid uuid
+                                      :id id
                                       :name name
                                       :yield yield
                                       :normalized-cost normalized-cost
@@ -22,23 +24,27 @@
 
         build-recipe-line-item (fn [recipe-line-item]
                                  (let [node (item->tree (:recipe-line-item/child recipe-line-item))
+                                       recipe-line-item-uuid (:recipe-line-item/uuid recipe-line-item)
                                        recipe-line-item-id (:db/id recipe-line-item)
                                        quantity (:recipe-line-item/quantity recipe-line-item)
                                        uom (-> recipe-line-item :recipe-line-item/uom :uom/code)
                                        total-cost (* quantity (-> node :normalized-cost))]
-                                   (merge node {:quantity quantity
+                                   (merge node {:recipe-line-item-uuid recipe-line-item-uuid
                                                 :recipe-line-item-id recipe-line-item-id
+                                                :quantity quantity
                                                 :total-cost total-cost
                                                 :uom uom})))
 
         build-base-item (fn [node]
                           (let [id (-> node :db/id)
+                                uuid (-> node :item/uuid)
                                 name (-> node :item/name)
                                 yield (-> node :item/yield)
                                 uom (-> node :item/uom :uom/code)
                                 cost-per-yield 1
                                 normalized-cost (/ cost-per-yield yield)]
-                            {:id id
+                            {:uuid uuid
+                             :id id
                              :uom uom
                              :normalized-cost normalized-cost
                              :name name}))]

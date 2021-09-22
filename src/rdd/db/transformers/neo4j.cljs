@@ -1,5 +1,6 @@
 (ns rdd.db.transformers.neo4j
   (:require [clojure.edn]
+            [postmortem.core :as pm]
             [datascript.core :as d]))
 
 (declare create-recipe-line-item!
@@ -11,11 +12,13 @@
   [db data]
 
   (let [id (-> data :_id)
+        uuid (-> data :uuid)
         name (-> data :name)
         code (-> data :code)
         ;; type (-> data :type)
 
         payload {:db/id id
+                 :uom/uuid uuid
                  :uom/name name
                  :uom/code code
                  #_#_:uom/type type}]
@@ -26,6 +29,7 @@
 (defn create-recipe-line-item!
   [db data]
   (let [id (-> data :_id)
+        uuid (-> data :uuid)
         child-data (-> data :made_of first)
         uom-code (-> data :measured_in first :code)
         quantity (-> data :measured_in first :measured_in.quantity)
@@ -33,6 +37,7 @@
         child-item-id (create-item! db child-data)
 
         payload {:db/id id
+                 :recipe-line-item/uuid uuid
                  :recipe-line-item/child child-item-id
                  :recipe-line-item/uom [:uom/code uom-code]
                  :recipe-line-item/quantity quantity}]
@@ -47,6 +52,7 @@
 (defn create-item!
   [db data]
   (let [id (-> data :_id)
+        uuid (-> data :uuid)
         name (-> data :name)
         yield (-> data :yield)
         uom-code (-> data :measured_in first :code)
@@ -54,6 +60,7 @@
         recipe-line-item-ids (create-recipe-line-items! db recipe-line-items-data)
 
         payload {:db/id id
+                 :item/uuid uuid
                  :item/yield yield
                  :item/uom [:uom/code uom-code]
                  :item/name name

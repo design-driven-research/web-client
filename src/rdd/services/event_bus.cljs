@@ -3,7 +3,7 @@
    [mount.core :refer [defstate]]
    [cljs.core.async.macros :refer (go)])
   (:require
-
+   [postmortem.core :as pm]
    [cljs.core.async :refer [chan <! put! close!]]))
 
 (declare process-queue)
@@ -57,6 +57,8 @@
 
 (defn publish!
   [data]
+
+
   (put! @bus data))
 
 #_(publish {:topic "yes"
@@ -68,6 +70,11 @@
 #_(subscribe "yes" (fn [data] (js/console.log "Call back baby!")))
 
 (comment
+
+  (last (pm/log-for :data))
+  ;; => {:topic :update/recipe-line-item-quantity, :data {:quantity 6, :uuid "nAU90hTKBemrhrrD85Qu-"}}
+
+
 
 
   (def hey (subscribe! :test (fn [] (js/console.log "Called"))))

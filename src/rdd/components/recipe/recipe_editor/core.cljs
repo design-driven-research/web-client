@@ -18,7 +18,7 @@
     {:keys [children]} :item}]
 
   (let [has-children? (seq children)]
-    (d/div {:class "mt-2 w-5/12"}
+    (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
            (when has-children?
              ($ rdd.components.recipe.recipe-editor.core/Children {:item item
                                                                    :update-quantity-handler update-quantity-handler
@@ -47,7 +47,7 @@
                                             (if (empty? query)
                                               true
                                               (re-find (re-pattern query) (.. film -title)))))]
-    (d/div {:class "item-quantity w-6/12 flex items-center"}
+    (d/div {:class "item-quantity flex items-center"}
            (d/div {:class "mr-2"}
                   ($ InputGroup {:value quantity
                                  :small true
@@ -72,7 +72,7 @@
            update-quantity-handler
            update-recipe-line-item-uom
            create-recipe-line-item]
-    {:keys [id name quantity recipe-line-item-id uom total-cost children]} :item}]
+    {:keys [id uuid name quantity recipe-line-item-id uom total-cost children]} :item}]
 
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
   {:wrap [(helix.core/memo =)]}
@@ -92,14 +92,13 @@
 
                              ($ Button {:icon "chevron-right"
                                         :minimal true}))))
-                  (d/div {:class "flex items-center space-between w-full p-2"}
-                         (d/div {:class "item-info flex w-full items-center"}
-                                (d/div {:class "flex w-5/12"}
-                                       ($ :span {:class "w-2/12"} (str index "."))
-                                       ($ :span {:class "w-10/12"} name)
-                                       ($ Button {:text "Add"
-                                                  :onClick (fn []
-                                                             (create-recipe-line-item id 17))})))
+                  (d/div {:class "flex items-center justify-between w-full p-2"}
+                         (d/div {:class "flex w-1/2 items-center"}
+                                ($ :span {:class "w-2/12"} (str index "."))
+                                ($ :span {:class "w-10/12"} (str name " | " uuid))
+                                ($ Button {:text "Add"
+                                           :onClick (fn []
+                                                      (create-recipe-line-item id 17))}))
                          ($ UsageControls {:update-quantity-handler update-quantity-handler
                                            :update-recipe-line-item-uom update-recipe-line-item-uom
                                            :recipe-line-item-id recipe-line-item-id

@@ -238,7 +238,17 @@
                            0)
         has-recipe-line-item-id? recipe-line-item-id]
     (when has-recipe-line-item-id?
-      (d/transact! @dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]]))))
+      (let [tx (d/transact! @dsdb [[:db/add recipe-line-item-id :recipe-line-item/quantity prepped-quantity]])
+            new-db (:db-after tx)]
+
+        (publish! {:topic :update/recipe-line-item-quantity
+                   :data {:quantity prepped-quantity
+                          :uuid (->> (d/q '[:find [?uuid]
+                                            :in $ ?id
+                                            :where [?id :recipe-line-item/uuid ?uuid]]
+                                          new-db recipe-line-item-id)
+                                     first)}})
+        new-db))))
 
 
 (defn update-recipe-line-item-uom!
