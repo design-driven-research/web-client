@@ -56,9 +56,8 @@
 (start-queue @bus)
 
 (defn publish!
+  "Publish a payload, {:topic :db-updated :data {}}"
   [data]
-
-
   (put! @bus data))
 
 #_(publish {:topic "yes"

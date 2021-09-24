@@ -2,8 +2,6 @@
   (:require [datascript.core :as d]
             [rdd.db :as db]))
 
-#_(tap> (d/datoms @db/dsdb :eavt))
-
 (def sample '({:value
                {:measured_in ({:_type "UOM", :name "Each", :_id 16, :code "ea", :type "COUNT"})
                 :yield 1.0
@@ -235,5 +233,3 @@
       first
       :value
       create-item!)
-
-#_(tap> (d/datoms @db/dsdb :eavt))

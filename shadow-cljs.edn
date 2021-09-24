@@ -4,7 +4,7 @@
   "resources"]
 
  :dependencies
- [[cljs-ajax "0.8.3"]
+ [[cljs-ajax "0.8.4"]
   [datascript "1.2.8"]
   [com.google.guava/guava "25.1-jre"]
   [datascript-transit "0.3.0"]

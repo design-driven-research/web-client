@@ -2,7 +2,7 @@
   (:require [helix.core :refer [$ defnc]]
             [mount.core :as mount]
             [rdd.components.nav-bar.main :refer [nav-bar]]
-            [rdd.services.web-socket]
+
             [rdd.db]
             [rdd.services.syncer]
             [helix.hooks]

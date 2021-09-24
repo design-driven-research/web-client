@@ -1,26 +1,3 @@
 {
-  "files.exclude": {
-    "**/node_modules/": true,
-    "public/js": true,
-    "public/css": true,
-    "target": true,
-    "checkouts": true,
-    "src/gen": true,
-    "**/pom.xml": true,
-    "**/pom.xml.asc": true,
-    "**/*.iml": true,
-    "**/*.jar": true,
-    "**/*.log": true,
-    "**/.shadow-cljs": true,
-    "**/.idea": true,
-    "**/.lein-*": true,
-    "**/.nrepl-*": true,
-    "**/.DS_Store": true,
-    "**/.hgignore": true,
-    "**/.hg/": true,
-    "**/.lsp": true,
-    "**/.calva": true,
-    ".clj-kondo/.cache": true,
-    "**/.logs": true
-  }
+  "files.exclude": {}
 }

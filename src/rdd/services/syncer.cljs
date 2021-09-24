@@ -2,19 +2,18 @@
   (:require-macros
    [mount.core :refer [defstate]])
   (:require [rdd.services.event-bus :refer [subscribe!]]
-            [postmortem.core :as pm]
-            [rdd.services.web-socket :as ws]))
+            [postmortem.core :as pm]))
 
-(subscribe! :db-updated (fn [& args] (tap> args)))
+(subscribe! :db-updated (fn [& args] #_(tap> args)))
 
 (subscribe!
  :update/recipe-line-item-quantity
  (fn [data]
-   (tap> "Sending")
-   (ws/send! :id :update/recipe-line-item-quantity
-             :data (pm/spy>> :data data)
-             :reply? (fn [& args]
-                       (js/console.log args)))))
+
+   #_(ws/send! :id :update/recipe-line-item-quantity
+               :data (pm/spy>> :data data)
+               :reply? (fn [& args]
+                         (js/console.log args)))))
 
 
 #_(pm/reset!)

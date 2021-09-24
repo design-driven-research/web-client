@@ -27,6 +27,7 @@
     "@blueprintjs/select": "^3.18.3",
     "@headlessui/react": "^1.4.0",
     "@tailwindcss/forms": "^0.3.3",
+    "axios": "^0.21.4",
     "cross-env": "^7.0.3",
     "react": "^18.0.0-alpha-88d121899-20210811",
     "react-dom": "^18.0.0-alpha-88d121899-20210811",
