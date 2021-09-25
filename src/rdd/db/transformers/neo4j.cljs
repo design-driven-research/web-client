@@ -87,7 +87,8 @@
         has-children? (seq children)]
 
     (if is-item?
-      (d/transact! db [payload]))))
+      (d/transact! db [payload])
+      (mapv))))
 
 
 
