@@ -73,6 +73,24 @@
 
     new-id))
 
+(defn create-items!
+  [db data]
+  (let [uuid (-> data :item/uuid)
+        is-item? uuid
+
+        payload {:item/uuid (-> data :item/uuid)
+                 :item/yield (-> data :measurement/yield)
+                 :item/uom (-> data :measurement/uom :uom/code)
+                 :item/name (-> data :item/name)}
+
+        children (-> data :composite/contains)
+        has-children? (seq children)]
+
+    (if is-item?
+      (d/transact! db [payload]))))
+
+
+
 (defn tree->db!
   [conn data]
   (tap> (:item data))
