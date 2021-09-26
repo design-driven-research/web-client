@@ -4,6 +4,7 @@
   (:require [clojure.edn]
             [nano-id.core :refer [nano-id]]
             [datascript.core :as d]
+            [postmortem.core :as pm]
             [rdd.converters.item :refer [item->tree]]
             [rdd.db.transformers.neo4j :as neo4j-transformer]
             [rdd.services.event-bus :refer [publish!]]))
@@ -193,12 +194,11 @@
 (defstate ^{:on-reload :noop} dsdb
   :start (do
            (js/console.log "Recreating dsdb")
-           (let [db (atom (d/empty-db (schema))
-                          :meta {:listeners (atom {})})]
-             (reset-db! db)
-             (seed-db db)
-             (setup-listeners db)
-             db)))
+           (let [conn (atom (d/empty-db (schema))
+                            :meta {:listeners (atom {})})]
+             (reset-db! conn)
+             (setup-listeners conn)
+             conn)))
 
 (defn seed-db
   "Seed the db with data"
@@ -209,8 +209,9 @@
   #_(d/transact! db (seed-base-data)))
 
 (defn reset-db!
-  [db]
-  (d/reset-conn! db (d/empty-db (schema))))
+  [conn]
+  (d/reset-conn! conn (d/empty-db (schema)))
+  (seed-db conn))
 
 (defn setup-listeners
   [conn]
@@ -268,34 +269,69 @@
                         [:db/add parent-item-id :item/children -1]
                         [:db/add child-item-id :item/parents -1]])))
 
+
+(defn create-recipes!
+  [conn data]
+
+  (let [item-uuid (-> data :item/uuid)
+        #_#_parent-uuid (or parent-uuid
+                            item-uuid)
+        is-item? item-uuid
+        children (-> data :composite/contains)
+        has-children? (seq children)]
+
+
+    (if (and is-item? has-children?)
+      (let [rli-ids (for [rli children] (create-recipes! conn rli))]
+        (d/transact! conn [{:db/id [:item/uuid item-uuid]
+                            :item/children rli-ids}]))
+
+      (let [child (first children)
+            child-uuid (-> child :item/uuid)
+            payload {:recipe-line-item/uuid (-> data :recipe-line-item/uuid)
+                     :recipe-line-item/quantity (-> data :measurement/quantity)
+                     :recipe-line-item/uom [:uom/code (-> data :measurement/uom :uom/code)]
+                     :recipe-line-item/child [:item/uuid child-uuid]}]
+        (when child
+          (do (doall (create-recipes! conn child))
+              (-> (d/transact! conn [payload])
+                  :tx-data
+                  (first))))))))
+
+
+(defn create-items!
+  [conn data]
+
+  (let [uuid (-> data :item/uuid)
+        is-item? uuid
+
+        payload {:item/uuid (-> data :item/uuid)
+                 :item/yield (-> data :measurement/yield)
+                 :item/uom [:uom/code (-> data :measurement/uom :uom/code)]
+                 :item/name (-> data :item/name)}
+
+        children (-> data :composite/contains)
+        has-children? (seq children)]
+
+    (cond-> {:id "create-items"}
+      is-item? (assoc :item-id (-> (d/transact! conn [payload]) :tx-data))
+      has-children? (assoc :children (doseq [child children]
+                                       (create-items! conn child))))))
+
+(defonce sample (atom nil))
+
 (defn tree->db!
   [data]
+  ;; ()
+  ;; (tap> data)
 
-  (neo4j-transformer/tree->db! @dsdb data)
+  (reset! sample data)
+  (doall (create-items! @dsdb (:item data)))
+  (doall (create-recipes! @dsdb (:item data)))
+  ;; (neo4j-transformer/tree->db! @dsdb data)
+
+
   (publish! {:topic :remote-db-loaded}))
-
-
-
-;; => #datascript.db.TxReport{:db-before #datascript/DB {:schema {:uom/code {:db/unique :db.unique/identity}, :item/parents {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many, :db/isComponent true}, :item/categories {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many}, :item/uom {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/one}, :recipe-line-item/uuid {:db/unique :db.unique/identity}, :cost/uuid {:db/unique :db.unique/identity}, :recipe-line-item/child {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :uom/uuid {:db/unique :db.unique/identity}, :item/uuid {:db/unique :db.unique/identity}, :conversion/uuid {:db/unique :db.unique/identity}, :conversion/to {:db/valueType :db.type/ref}, :uom/system {:db/valueType :db.type/ref}, :item/children {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many, :db/isComponent true}, :item/tags {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many}, :conversion/item {:db/valueType :db.type/ref}, :recipe-line-item/parent {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :conversion/from {:db/valueType :db.type/ref}, :cost/item {:db/valueType :db.type/ref}, :recipe-line-item/uom {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :cost/uom {:db/valueType :db.type/ref}, :uom/name {:db/unique :db.unique/identity}, :item/name {:db/unique :db.unique/identity}, :schema/version {:version "0.0.1", :doc "Say something"}, :uom/type {:db/valueType :db.type/ref}}, :datoms [[1 :db/ident :units.system/IMPERIAL 536870913] [2 :db/ident :units.system/METRIC 536870913] [3 :db/ident :units.type/WEIGHT 536870913] [4 :db/ident :units.type/VOLUME 536870913] [5 :db/ident :units.type/CUSTOM 536870913] [6 :uom/code "lb" 536870914] [6 :uom/factor 453.5920865 536870914] [6 :uom/name "Pound" 536870914] [6 :uom/system 1 536870914] [6 :uom/type 3 536870914] [6 :uom/uuid "ykCtRKUyY2frBVI6kXSOg" 536870914] [7 :uom/code "gr" 536870914] [7 :uom/factor 1 536870914] [7 :uom/name "gr" 536870914] [7 :uom/system 2 536870914] [7 :uom/type 3 536870914] [7 :uom/uuid "qRUeaM70Fbh7pwmmbwJfP" 536870914] [8 :uom/code "oz" 536870914] [8 :uom/factor 28.34949978 536870914] [8 :uom/name "Ounce" 536870914] [8 :uom/system 1 536870914] [8 :uom/type 3 536870914] [8 :uom/uuid "wm9PXk9S5vZJdCmNe-dcX" 536870914] [9 :uom/code "kg" 536870914] [9 :uom/factor 1000 536870914] [9 :uom/name "Kilogram" 536870914] [9 :uom/system 2 536870914] [9 :uom/type 3 536870914] [9 :uom/uuid "LSwAmF4f0W_ycLGB3TGIj" 536870914] [10 :uom/code "gallon" 536870914] [10 :uom/factor 768.0019661 536870914] [10 :uom/name "Gallon" 536870914] [10 :uom/system 1 536870914] [10 :uom/type 4 536870914] [10 :uom/uuid "A4eJLDI4V1FvwCq-9zUxc" 536870914] [11 :uom/code "floz" 536870914] [11 :uom/factor 5.999988 536870914] [11 :uom/name "Fluid Ounce" 536870914] [11 :uom/system 1 536870914] [11 :uom/type 4 536870914] [11 :uom/uuid "BDbgSumlT5uUh8h5IP_0p" 536870914] [12 :uom/code "tbs" 536870914] [12 :uom/factor 3.000003 536870914] [12 :uom/name "Tablespoon" 536870914] [12 :uom/system 1 536870914] [12 :uom/type 4 536870914] [12 :uom/uuid "e8Wz94QBScub-EqkBZuSn" 536870914] [13 :uom/code "cup" 536870914] [13 :uom/factor 48.0000768 536870914] [13 :uom/name "Cup" 536870914] [13 :uom/system 1 536870914] [13 :uom/type 4 536870914] [13 :uom/uuid "tZxM_e4mtMV8IoRqzMJdD" 536870914] [14 :uom/code "tsp" 536870914] [14 :uom/factor 1 536870914] [14 :uom/name "Teaspoon" 536870914] [14 :uom/system 1 536870914] [14 :uom/type 4 536870914] [14 :uom/uuid "cW8sWsT4gI9_xkUspRUCa" 536870914] [15 :uom/code "ea" 536870914] [15 :uom/name "Each" 536870914] [15 :uom/type 5 536870914] [15 :uom/uuid "k69XN7ozPZdghyw4OmieE" 536870914] [16 :item/uuid "asdfasdf" 536870915]]}, :db-after #datascript/DB {:schema {:uom/code {:db/unique :db.unique/identity}, :item/parents {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many, :db/isComponent true}, :item/categories {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many}, :item/uom {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/one}, :recipe-line-item/uuid {:db/unique :db.unique/identity}, :cost/uuid {:db/unique :db.unique/identity}, :recipe-line-item/child {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :uom/uuid {:db/unique :db.unique/identity}, :item/uuid {:db/unique :db.unique/identity}, :conversion/uuid {:db/unique :db.unique/identity}, :conversion/to {:db/valueType :db.type/ref}, :uom/system {:db/valueType :db.type/ref}, :item/children {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many, :db/isComponent true}, :item/tags {:db/valueType :db.type/ref, :db/cardinality :db.cardinality/many}, :conversion/item {:db/valueType :db.type/ref}, :recipe-line-item/parent {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :conversion/from {:db/valueType :db.type/ref}, :cost/item {:db/valueType :db.type/ref}, :recipe-line-item/uom {:db/cardinality :db.cardinality/one, :db/valueType :db.type/ref}, :cost/uom {:db/valueType :db.type/ref}, :uom/name {:db/unique :db.unique/identity}, :item/name {:db/unique :db.unique/identity}, :schema/version {:version "0.0.1", :doc "Say something"}, :uom/type {:db/valueType :db.type/ref}}, :datoms [[1 :db/ident :units.system/IMPERIAL 536870913] [2 :db/ident :units.system/METRIC 536870913] [3 :db/ident :units.type/WEIGHT 536870913] [4 :db/ident :units.type/VOLUME 536870913] [5 :db/ident :units.type/CUSTOM 536870913] [6 :uom/code "lb" 536870914] [6 :uom/factor 453.5920865 536870914] [6 :uom/name "Pound" 536870914] [6 :uom/system 1 536870914] [6 :uom/type 3 536870914] [6 :uom/uuid "ykCtRKUyY2frBVI6kXSOg" 536870914] [7 :uom/code "gr" 536870914] [7 :uom/factor 1 536870914] [7 :uom/name "gr" 536870914] [7 :uom/system 2 536870914] [7 :uom/type 3 536870914] [7 :uom/uuid "qRUeaM70Fbh7pwmmbwJfP" 536870914] [8 :uom/code "oz" 536870914] [8 :uom/factor 28.34949978 536870914] [8 :uom/name "Ounce" 536870914] [8 :uom/system 1 536870914] [8 :uom/type 3 536870914] [8 :uom/uuid "wm9PXk9S5vZJdCmNe-dcX" 536870914] [9 :uom/code "kg" 536870914] [9 :uom/factor 1000 536870914] [9 :uom/name "Kilogram" 536870914] [9 :uom/system 2 536870914] [9 :uom/type 3 536870914] [9 :uom/uuid "LSwAmF4f0W_ycLGB3TGIj" 536870914] [10 :uom/code "gallon" 536870914] [10 :uom/factor 768.0019661 536870914] [10 :uom/name "Gallon" 536870914] [10 :uom/system 1 536870914] [10 :uom/type 4 536870914] [10 :uom/uuid "A4eJLDI4V1FvwCq-9zUxc" 536870914] [11 :uom/code "floz" 536870914] [11 :uom/factor 5.999988 536870914] [11 :uom/name "Fluid Ounce" 536870914] [11 :uom/system 1 536870914] [11 :uom/type 4 536870914] [11 :uom/uuid "BDbgSumlT5uUh8h5IP_0p" 536870914] [12 :uom/code "tbs" 536870914] [12 :uom/factor 3.000003 536870914] [12 :uom/name "Tablespoon" 536870914] [12 :uom/system 1 536870914] [12 :uom/type 4 536870914] [12 :uom/uuid "e8Wz94QBScub-EqkBZuSn" 536870914] [13 :uom/code "cup" 536870914] [13 :uom/factor 48.0000768 536870914] [13 :uom/name "Cup" 536870914] [13 :uom/system 1 536870914] [13 :uom/type 4 536870914] [13 :uom/uuid "tZxM_e4mtMV8IoRqzMJdD" 536870914] [14 :uom/code "tsp" 536870914] [14 :uom/factor 1 536870914] [14 :uom/name "Teaspoon" 536870914] [14 :uom/system 1 536870914] [14 :uom/type 4 536870914] [14 :uom/uuid "cW8sWsT4gI9_xkUspRUCa" 536870914] [15 :uom/code "ea" 536870914] [15 :uom/name "Each" 536870914] [15 :uom/type 5 536870914] [15 :uom/uuid "k69XN7ozPZdghyw4OmieE" 536870914] [16 :item/uuid "asdfasdf" 536870915]]}, :tx-data [], :tempids {:db/current-tx 536870916}, :tx-meta nil}
-
-
-;; Fiddle
-;; #_(tap> (item-by-name "Chorizo Family Pack"))
-;; #_(tap> (d/datoms @@dsdb :eavt))
-;; #_(item-by-name "Chorizo Family Pack")
-  ;; => {:id nil, :uom nil, :normalized-cost ##Inf, :name nil}
-
-;; Reset
-
-
-;; Setup the DB
-
-
-;; (d/listen! dsdb :default (fn [] (publish! {:topic :db-updated})))
-
-
-;; (d/listen! dsdb :degub (fn [tx] (tap> tx)))
-
 
 
 
@@ -316,3 +352,171 @@
                         (update-recipe-line-item-quantity! 27 @count)) 1000)))
 
 ;; (update-recipe-line-item-quantity! 27 20)
+
+
+
+
+#_(reset-db! @dsdb)
+#_(create-items! @dsdb (:item @sample))
+  ;; => {:id "create-items", :item-id [#datascript/Datom [16 :item/uuid "gEDXVREqPygQ4vJ0axy3D" 536870915 true] #datascript/Datom [16 :item/yield 1 536870915 true] #datascript/Datom [16 :item/uom 15 536870915 true] #datascript/Datom [16 :item/name "Chorizo Family Pack" 536870915 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [17 :item/uuid "5HVmnDzED6xPgyzoz4Vxg" 536870916 true] #datascript/Datom [17 :item/yield 1 536870916 true] #datascript/Datom [17 :item/uom 15 536870916 true] #datascript/Datom [17 :item/name "Chorizo Wrap" 536870916 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [18 :item/uuid "Dx1Sxaq5f7LIwPlvNquJO" 536870917 true] #datascript/Datom [18 :item/yield 40 536870917 true] #datascript/Datom [18 :item/uom 7 536870917 true] #datascript/Datom [18 :item/name "Master Sauce" 536870917 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [19 :item/uuid "-ffuceHJ5VWgWGReKh0J8" 536870918 true] #datascript/Datom [19 :item/yield 130 536870918 true] #datascript/Datom [19 :item/uom 7 536870918 true] #datascript/Datom [19 :item/name "Special Sauce" 536870918 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [20 :item/uuid "ZREz79S73VyWuvSwNYhHz" 536870919 true] #datascript/Datom [20 :item/yield 1 536870919 true] #datascript/Datom [20 :item/uom 7 536870919 true] #datascript/Datom [20 :item/name "Salt" 536870919 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [21 :item/uuid "I1wt2eLoKoq0BlgvtAcNr" 536870920 true] #datascript/Datom [21 :item/yield 1 536870920 true] #datascript/Datom [21 :item/uom 7 536870920 true] #datascript/Datom [21 :item/name "Garlic Powder" 536870920 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [22 :item/uuid "mvaID1cZq7PRsqsmijHka" 536870921 true] #datascript/Datom [22 :item/yield 1 536870921 true] #datascript/Datom [22 :item/uom 7 536870921 true] #datascript/Datom [22 :item/name "Onion Powder" 536870921 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [23 :item/uuid "Sw5U2gCjMqDcqG9ZO4Ap5" 536870922 true] #datascript/Datom [23 :item/yield 1 536870922 true] #datascript/Datom [23 :item/uom 7 536870922 true] #datascript/Datom [23 :item/name "Asafoetida" 536870922 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [24 :item/uuid "bpNVfZXJ5E2eCKQpn4vVN" 536870923 true] #datascript/Datom [24 :item/yield 1 536870923 true] #datascript/Datom [24 :item/uom 7 536870923 true] #datascript/Datom [24 :item/name "Pearl Dust" 536870923 true]]})})})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [25 :item/uuid "LPoAuUo0_Q6qvwEahYVk7" 536870924 true] #datascript/Datom [25 :item/yield 30 536870924 true] #datascript/Datom [25 :item/uom 7 536870924 true] #datascript/Datom [25 :item/name "Spicy Sauce" 536870924 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [26 :item/uuid "5vF0-WNLzZ_wuGzRQwQtW" 536870925 true] #datascript/Datom [26 :item/yield 1 536870925 true] #datascript/Datom [26 :item/uom 7 536870925 true] #datascript/Datom [26 :item/name "Pepper" 536870925 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [27 :item/uuid "FX1_MLSsiqzyTpGhnrTg1" 536870926 true] #datascript/Datom [27 :item/yield 1 536870926 true] #datascript/Datom [27 :item/uom 7 536870926 true] #datascript/Datom [27 :item/name "Turmeric" 536870926 true]]})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})})} {:id "create-items", :children ({:id "create-items", :item-id []})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})}
+
+  ;; => {:id "create-items", :item-id [#datascript/Datom [16 :item/uuid "gEDXVREqPygQ4vJ0axy3D" 536870915 true] #datascript/Datom [16 :item/yield 1 536870915 true] #datascript/Datom [16 :item/uom 15 536870915 true] #datascript/Datom [16 :item/name "Chorizo Family Pack" 536870915 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [17 :item/uuid "5HVmnDzED6xPgyzoz4Vxg" 536870916 true] #datascript/Datom [17 :item/yield 1 536870916 true] #datascript/Datom [17 :item/uom 15 536870916 true] #datascript/Datom [17 :item/name "Chorizo Wrap" 536870916 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [18 :item/uuid "Dx1Sxaq5f7LIwPlvNquJO" 536870917 true] #datascript/Datom [18 :item/yield 40 536870917 true] #datascript/Datom [18 :item/uom 7 536870917 true] #datascript/Datom [18 :item/name "Master Sauce" 536870917 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [19 :item/uuid "-ffuceHJ5VWgWGReKh0J8" 536870918 true] #datascript/Datom [19 :item/yield 130 536870918 true] #datascript/Datom [19 :item/uom 7 536870918 true] #datascript/Datom [19 :item/name "Special Sauce" 536870918 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [20 :item/uuid "ZREz79S73VyWuvSwNYhHz" 536870919 true] #datascript/Datom [20 :item/yield 1 536870919 true] #datascript/Datom [20 :item/uom 7 536870919 true] #datascript/Datom [20 :item/name "Salt" 536870919 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [21 :item/uuid "I1wt2eLoKoq0BlgvtAcNr" 536870920 true] #datascript/Datom [21 :item/yield 1 536870920 true] #datascript/Datom [21 :item/uom 7 536870920 true] #datascript/Datom [21 :item/name "Garlic Powder" 536870920 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [22 :item/uuid "mvaID1cZq7PRsqsmijHka" 536870921 true] #datascript/Datom [22 :item/yield 1 536870921 true] #datascript/Datom [22 :item/uom 7 536870921 true] #datascript/Datom [22 :item/name "Onion Powder" 536870921 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [23 :item/uuid "Sw5U2gCjMqDcqG9ZO4Ap5" 536870922 true] #datascript/Datom [23 :item/yield 1 536870922 true] #datascript/Datom [23 :item/uom 7 536870922 true] #datascript/Datom [23 :item/name "Asafoetida" 536870922 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [24 :item/uuid "bpNVfZXJ5E2eCKQpn4vVN" 536870923 true] #datascript/Datom [24 :item/yield 1 536870923 true] #datascript/Datom [24 :item/uom 7 536870923 true] #datascript/Datom [24 :item/name "Pearl Dust" 536870923 true]]})})})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [25 :item/uuid "LPoAuUo0_Q6qvwEahYVk7" 536870924 true] #datascript/Datom [25 :item/yield 30 536870924 true] #datascript/Datom [25 :item/uom 7 536870924 true] #datascript/Datom [25 :item/name "Spicy Sauce" 536870924 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [26 :item/uuid "5vF0-WNLzZ_wuGzRQwQtW" 536870925 true] #datascript/Datom [26 :item/yield 1 536870925 true] #datascript/Datom [26 :item/uom 7 536870925 true] #datascript/Datom [26 :item/name "Pepper" 536870925 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [27 :item/uuid "FX1_MLSsiqzyTpGhnrTg1" 536870926 true] #datascript/Datom [27 :item/yield 1 536870926 true] #datascript/Datom [27 :item/uom 7 536870926 true] #datascript/Datom [27 :item/name "Turmeric" 536870926 true]]})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})})} {:id "create-items", :children ({:id "create-items", :item-id []})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})}
+
+  ;; => {:id "create-items", :item-id [#datascript/Datom [16 :item/uuid "gEDXVREqPygQ4vJ0axy3D" 536870915 true] #datascript/Datom [16 :item/yield 1 536870915 true] #datascript/Datom [16 :item/uom 15 536870915 true] #datascript/Datom [16 :item/name "Chorizo Family Pack" 536870915 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [17 :item/uuid "5HVmnDzED6xPgyzoz4Vxg" 536870916 true] #datascript/Datom [17 :item/yield 1 536870916 true] #datascript/Datom [17 :item/uom 15 536870916 true] #datascript/Datom [17 :item/name "Chorizo Wrap" 536870916 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [18 :item/uuid "Dx1Sxaq5f7LIwPlvNquJO" 536870917 true] #datascript/Datom [18 :item/yield 40 536870917 true] #datascript/Datom [18 :item/uom 7 536870917 true] #datascript/Datom [18 :item/name "Master Sauce" 536870917 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [19 :item/uuid "-ffuceHJ5VWgWGReKh0J8" 536870918 true] #datascript/Datom [19 :item/yield 130 536870918 true] #datascript/Datom [19 :item/uom 7 536870918 true] #datascript/Datom [19 :item/name "Special Sauce" 536870918 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [20 :item/uuid "ZREz79S73VyWuvSwNYhHz" 536870919 true] #datascript/Datom [20 :item/yield 1 536870919 true] #datascript/Datom [20 :item/uom 7 536870919 true] #datascript/Datom [20 :item/name "Salt" 536870919 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [21 :item/uuid "I1wt2eLoKoq0BlgvtAcNr" 536870920 true] #datascript/Datom [21 :item/yield 1 536870920 true] #datascript/Datom [21 :item/uom 7 536870920 true] #datascript/Datom [21 :item/name "Garlic Powder" 536870920 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [22 :item/uuid "mvaID1cZq7PRsqsmijHka" 536870921 true] #datascript/Datom [22 :item/yield 1 536870921 true] #datascript/Datom [22 :item/uom 7 536870921 true] #datascript/Datom [22 :item/name "Onion Powder" 536870921 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [23 :item/uuid "Sw5U2gCjMqDcqG9ZO4Ap5" 536870922 true] #datascript/Datom [23 :item/yield 1 536870922 true] #datascript/Datom [23 :item/uom 7 536870922 true] #datascript/Datom [23 :item/name "Asafoetida" 536870922 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [24 :item/uuid "bpNVfZXJ5E2eCKQpn4vVN" 536870923 true] #datascript/Datom [24 :item/yield 1 536870923 true] #datascript/Datom [24 :item/uom 7 536870923 true] #datascript/Datom [24 :item/name "Pearl Dust" 536870923 true]]})})})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [25 :item/uuid "LPoAuUo0_Q6qvwEahYVk7" 536870924 true] #datascript/Datom [25 :item/yield 30 536870924 true] #datascript/Datom [25 :item/uom 7 536870924 true] #datascript/Datom [25 :item/name "Spicy Sauce" 536870924 true]], :children ({:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [26 :item/uuid "5vF0-WNLzZ_wuGzRQwQtW" 536870925 true] #datascript/Datom [26 :item/yield 1 536870925 true] #datascript/Datom [26 :item/uom 7 536870925 true] #datascript/Datom [26 :item/name "Pepper" 536870925 true]]})} {:id "create-items", :children ({:id "create-items", :item-id [#datascript/Datom [27 :item/uuid "FX1_MLSsiqzyTpGhnrTg1" 536870926 true] #datascript/Datom [27 :item/yield 1 536870926 true] #datascript/Datom [27 :item/uom 7 536870926 true] #datascript/Datom [27 :item/name "Turmeric" 536870926 true]]})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})})} {:id "create-items", :children ({:id "create-items", :item-id []})} {:id "create-items", :children ({:id "create-items", :item-id []})})})})}
+
+#_(create-recipes! @dsdb (:item @sample) (first (:item @sample)))
+  ;; => :repl/exception!
+
+
+#_(tap> (:item @sample))
+#_(pm/reset!)
+#_(pm/log-for :is-rli-branch)
+#_(pm/log-for :is-item-branch)
+  ;; => nil
+
+;; => nil
+
+;; => nil
+
+;; => nil
+
+;; => ["gEDXVREqPygQ4vJ0axy3D" nil]
+
+;; => nil
+
+
+
+(d/q '[:find ?name ?id ?uuid
+       :where [?id :item/name ?name]
+       [?id :item/uuid ?uuid]]
+     (d/db @dsdb))
+;; => #{["Chorizo Wrap" 17 "5HVmnDzED6xPgyzoz4Vxg"]
+;;      ["Onion Powder" 22 "mvaID1cZq7PRsqsmijHka"]
+;;      ["Pepper" 26 "5vF0-WNLzZ_wuGzRQwQtW"]
+;;      ["Garlic Powder" 21 "I1wt2eLoKoq0BlgvtAcNr"]
+;;      ["Master Sauce" 18 "Dx1Sxaq5f7LIwPlvNquJO"]
+;;      ["Turmeric" 27 "FX1_MLSsiqzyTpGhnrTg1"]
+;;      ["Chorizo Family Pack" 16 "gEDXVREqPygQ4vJ0axy3D"]
+;;      ["Special Sauce" 19 "-ffuceHJ5VWgWGReKh0J8"]
+;;      ["Spicy Sauce" 25 "LPoAuUo0_Q6qvwEahYVk7"]
+;;      ["Asafoetida" 23 "Sw5U2gCjMqDcqG9ZO4Ap5"]
+;;      ["Salt" 20 "ZREz79S73VyWuvSwNYhHz"]
+;;      ["Pearl Dust" 24 "bpNVfZXJ5E2eCKQpn4vVN"]}
+
+;; => #{["Chorizo Wrap" 17 "5HVmnDzED6xPgyzoz4Vxg"]
+;;      ["Onion Powder" 22 "mvaID1cZq7PRsqsmijHka"]
+;;      ["Pepper" 26 "5vF0-WNLzZ_wuGzRQwQtW"]
+;;      ["Garlic Powder" 21 "I1wt2eLoKoq0BlgvtAcNr"]
+;;      ["Master Sauce" 18 "Dx1Sxaq5f7LIwPlvNquJO"]
+;;      ["Turmeric" 27 "FX1_MLSsiqzyTpGhnrTg1"]
+;;      ["Chorizo Family Pack" 16 "gEDXVREqPygQ4vJ0axy3D"]
+;;      ["Special Sauce" 19 "-ffuceHJ5VWgWGReKh0J8"]
+;;      ["Spicy Sauce" 25 "LPoAuUo0_Q6qvwEahYVk7"]
+;;      ["Asafoetida" 23 "Sw5U2gCjMqDcqG9ZO4Ap5"]
+;;      ["Salt" 20 "ZREz79S73VyWuvSwNYhHz"]
+;;      ["Pearl Dust" 24 "bpNVfZXJ5E2eCKQpn4vVN"]}
+
+;; => #{["Garlic Powder" 21]
+;;      ["Spicy Sauce" 25]
+;;      ["Pearl Dust" 24]
+;;      ["Master Sauce" 18]
+;;      ["Chorizo Wrap" 17]
+;;      ["Turmeric" 27]
+;;      ["Salt" 20]
+;;      ["Asafoetida" 23]
+;;      ["Pepper" 26]
+;;      ["Onion Powder" 22]
+;;      ["Special Sauce" 19]
+;;      ["Chorizo Family Pack" 16]}
+
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]}
+
+;; => #{["Chorizo Family Pack"]}
+
+;; => #{["Chorizo Family Pack"]}
+
+;; => #{["Chorizo Family Pack" 16]}
+
+;; => #{["Chorizo Family Pack" 16]}
+
+
+#_(publish! {:topic :remote-db-loaded})
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]
+;;      ["Asafoetida"]
+;;      ["Garlic Powder"]
+;;      ["Pepper"]
+;;      ["Special Sauce"]
+;;      ["Turmeric"]
+;;      ["Onion Powder"]
+;;      ["Pearl Dust"]
+;;      ["Salt"]
+;;      ["Chorizo Wrap"]
+;;      ["Spicy Sauce"]
+;;      ["Master Sauce"]}
+
+;; => #{["Chorizo Family Pack"]}

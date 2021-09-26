@@ -5,6 +5,7 @@
 
 (declare create-recipe-line-item!
          create-recipe-line-items!
+         create-items!
          create-item!
          create-uom!)
 
@@ -52,60 +53,98 @@
   [db recipe-line-items]
   (mapv (partial create-recipe-line-item! db) recipe-line-items))
 
-(defn create-item!
-  [db data]
-  (let [uuid (-> data :item/uuid)
-        name (-> data :item/name)
-        yield (-> data :measurement/yield)
-        uom-code (-> data :measurement/uom :uom/code)
-        recipe-line-items-data (-> data :composite/contains)
-        recipe-line-item-ids (if (seq recipe-line-items-data)
-                               (create-recipe-line-items! db recipe-line-items-data)
-                               nil)
+#_(defn create-item!
+    [db data]
+    (let [uuid (-> data :item/uuid)
+          name (-> data :item/name)
+          yield (-> data :measurement/yield)
+          uom-code (-> data :measurement/uom :uom/code)
+          recipe-line-items-data (-> data :composite/contains)
+          recipe-line-item-ids (if (seq recipe-line-items-data)
+                                 (create-recipe-line-items! db recipe-line-items-data)
+                                 nil)
 
-        payload (cond-> {:item/uuid uuid
-                         :item/yield yield
-                         :item/uom [:uom/code uom-code]
-                         :item/name name}
-                  (seq recipe-line-items-data) (merge {:item/children recipe-line-item-ids}))
-        result (-> (d/transact! db [payload]) :tx-data)
-        new-id (ffirst result)]
+          payload (cond-> {:item/uuid uuid
+                           :item/yield yield
+                           :item/uom [:uom/code uom-code]
+                           :item/name name}
+                    (seq recipe-line-items-data) (merge {:item/children recipe-line-item-ids}))
+          result (-> (d/transact! db [payload]) :tx-data)
+          new-id (ffirst result)]
 
-    new-id))
+      new-id))
+
+
+
+(defn create-recipes!
+  [conn data & parent-uuid]
+
+  (let [item-uuid (-> data :item/uuid)
+        is-item? uuid
+        children (-> data :composite/contains)
+        has-children? (seq children)]
+
+    (if (and is-item? has-children?)
+      (let [rli-ids (for [rli children] (create-recipes! conn rli item-uuid))]
+        (d/transact! conn [{:db/id [:item/uuid item-uuid]
+                            :item/children rli-ids}]))
+
+      (let [payload {:recipe-line-item/uuid (-> data :recipe-line-item/uuid)
+                     :recipe-line-item/quantity (-> data :measurement/quantity)
+                     :recipe-line-item/uom [:uom/code (-> data :measurement/uom :uom/code)]
+                     :recipe-line-item/child [:item/uuid parent-uuid]}]
+        (-> (d/transact! conn [payload])
+            :tx-data
+            (first))))))
+
 
 (defn create-items!
-  [db data]
+  [conn data]
+
   (let [uuid (-> data :item/uuid)
         is-item? uuid
 
         payload {:item/uuid (-> data :item/uuid)
                  :item/yield (-> data :measurement/yield)
-                 :item/uom (-> data :measurement/uom :uom/code)
+                 :item/uom [:uom/code (-> data :measurement/uom :uom/code)]
                  :item/name (-> data :item/name)}
 
         children (-> data :composite/contains)
         has-children? (seq children)]
 
-    (if is-item?
-      (d/transact! db [payload])
-      (mapv))))
-
-
+    (cond-> {}
+      is-item? (assoc :item-id (-> (d/transact! conn [payload]) :tx-data))
+      has-children? (assoc :children (map (fn [item] create-items! conn item) children)))))
 
 (defn tree->db!
   [conn data]
-  (tap> (:item data))
+  (pm/spy>> :data data)
+  (pm/spy>> :conn conn)
 
-  (create-item! conn (:item data)))
-
-(cond-> {}
-  (seq [1 2]) (merge {:a 19})
-  false {}
-  true (merge {:X 20}))
+  ;; (create-items! conn (:item data))
+  ;; (create-recipes! conn (:item data))
+  )
 
 (comment
-
   (pm/reset!)
+  (:item (first (pm/log-for :data)))
+
+  (create-items! (pm/log-for :conn) (:item (first (pm/log-for :data))))
+  ;; => {:id "Tracking"}
+
+  ;; => {:id "Tracking", :hey 10}
+
+  ;; => {:id "Tracking"}
+
+  ;; => {:id "Tracking"}
+
+  ;; => {}
+
+  ;; => {}
+
+
+  (pm/log-for :transact)
+
 
   (pm/log-for :child-item-id)
   (pm/log-for :payload)
