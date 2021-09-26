@@ -18,7 +18,7 @@ yarn
 Start dev env. This will fire up shadow-cljs and tailwind via postcss
 
 ```bash
-yarn dev
+yarn start
 ```
 
 Navigate to: [http://localhost:4200](http://localhost:4200)

@@ -2,55 +2,59 @@
 
 (defn item->tree
   [e]
-  (let [is-item? (:item/children e)
-        is-recipe-line-item? (:recipe-line-item/child e)
+  (let [is-item? (:item/uuid e)
+        has-children? (:composite/contains e)
+        is-recipe-line-item? (not is-item?)
 
-        build-item-with-children (fn [node]
-                                   (let [children (mapv item->tree (:item/children node))
-                                         id (-> node :db/id)
-                                         uuid (-> node :item/uuid)
-                                         name (-> node :item/name)
-                                         yield (-> node :item/yield)
+        build-item-with-children (fn [item]
+                                   (let [children (mapv item->tree (:composite/contains item))
+                                         id (:db/id item)
+                                         uuid (:item/uuid item)
+                                         name (:item/name item)
+                                         yield (:measurement/yield item)
                                          total-children-cost (->> children
                                                                   (map :total-cost)
                                                                   (reduce +))
-                                         normalized-cost (or (/ total-children-cost yield) 1)]
-                                     {:uuid uuid
-                                      :id id
-                                      :name name
-                                      :yield yield
-                                      :normalized-cost normalized-cost
-                                      :children children}))
+                                         normalized-cost (or (/ total-children-cost yield) 1)
+                                         response {:uuid uuid
+                                                   :id id
+                                                   :name name
+                                                   :yield yield
+                                                   :normalized-cost normalized-cost
+                                                   :children children}]
+                                     response))
 
         build-recipe-line-item (fn [recipe-line-item]
-                                 (let [node (item->tree (:recipe-line-item/child recipe-line-item))
+                                 (let [item (item->tree (first (:composite/contains recipe-line-item)))
                                        recipe-line-item-uuid (:recipe-line-item/uuid recipe-line-item)
                                        recipe-line-item-id (:db/id recipe-line-item)
-                                       quantity (:recipe-line-item/quantity recipe-line-item)
-                                       uom (-> recipe-line-item :recipe-line-item/uom :uom/code)
-                                       total-cost (* quantity (-> node :normalized-cost))]
-                                   (merge node {:recipe-line-item-uuid recipe-line-item-uuid
-                                                :recipe-line-item-id recipe-line-item-id
-                                                :quantity quantity
-                                                :total-cost total-cost
-                                                :uom uom})))
+                                       quantity (:measurement/quantity recipe-line-item)
+                                       uom (-> recipe-line-item :measurement/uom :uom/code)
+                                       total-cost (* quantity (:normalized-cost item))
+                                       response (merge item {:recipe-line-item-uuid recipe-line-item-uuid
+                                                             :recipe-line-item-id recipe-line-item-id
+                                                             :quantity quantity
+                                                             :total-cost total-cost
+                                                             :uom uom})]
+                                   response))
 
-        build-base-item (fn [node]
-                          (let [id (-> node :db/id)
-                                uuid (-> node :item/uuid)
-                                name (-> node :item/name)
-                                yield (-> node :item/yield)
-                                uom (-> node :item/uom :uom/code)
+        build-base-item (fn [item]
+                          (let [id (:db/id item)
+                                uuid (:item/uuid item)
+                                name (:item/name item)
+                                yield (:measurement/yield item)
+                                uom (-> item :measurement/uom :uom/code)
                                 cost-per-yield 1
-                                normalized-cost (/ cost-per-yield yield)]
-                            {:uuid uuid
-                             :id id
-                             :uom uom
-                             :normalized-cost normalized-cost
-                             :name name}))]
+                                normalized-cost (/ cost-per-yield yield)
+                                response {:uuid uuid
+                                          :id id
+                                          :uom uom
+                                          :normalized-cost normalized-cost
+                                          :name name}]
+                            response))]
 
     (cond
-      is-item? (build-item-with-children e)
+      (and is-item? has-children?) (build-item-with-children e)
       is-recipe-line-item? (build-recipe-line-item e)
       :default (build-base-item e))))
 

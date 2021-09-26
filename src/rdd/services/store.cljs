@@ -9,9 +9,8 @@
 
 
 
-
 (bus/subscribe! :load-bootstrap-data! (fn []
                                         (item-by-name "Chorizo Family Pack")))
 
-#_(bus/publish! {:topic :load-bootstrap-data!})
+(bus/publish! {:topic :load-bootstrap-data!})
 
