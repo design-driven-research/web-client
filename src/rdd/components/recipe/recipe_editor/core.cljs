@@ -19,6 +19,8 @@
 
   (let [has-children? (seq children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
+           (d/h1 (:name item))
+           (d/p {:class "text-lg"} "Line items")
            (when has-children?
              ($ rdd.components.recipe.recipe-editor.core/Children {:item item
                                                                    :update-quantity-handler update-quantity-handler
@@ -95,10 +97,10 @@
                   (d/div {:class "flex items-center justify-between w-full p-2"}
                          (d/div {:class "flex w-1/2 items-center"}
                                 ($ :span {:class "w-2/12"} (str index "."))
-                                ($ :span {:class "w-10/12"} (str name " | " uuid))
-                                ($ Button {:text "Add"
-                                           :onClick (fn []
-                                                      (create-recipe-line-item id 17))}))
+                                ($ :span {:class "w-10/12"} (str name))
+                                #_($ Button {:text "Add"
+                                             :onClick (fn []
+                                                        (create-recipe-line-item id 17))}))
                          ($ UsageControls {:update-quantity-handler update-quantity-handler
                                            :update-recipe-line-item-uom update-recipe-line-item-uom
                                            :recipe-line-item-id recipe-line-item-id
