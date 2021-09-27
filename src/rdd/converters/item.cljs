@@ -6,23 +6,23 @@
         has-children? (:composite/contains e)
         is-recipe-line-item? (not is-item?)
 
-        build-item-with-children (fn [item]
-                                   (let [children (mapv item->tree (:composite/contains item))
-                                         id (:db/id item)
-                                         uuid (:item/uuid item)
-                                         name (:item/name item)
-                                         yield (:measurement/yield item)
-                                         total-children-cost (->> children
-                                                                  (map :total-cost)
-                                                                  (reduce +))
-                                         normalized-cost (or (/ total-children-cost yield) 1)
-                                         response {:uuid uuid
-                                                   :id id
-                                                   :name name
-                                                   :yield yield
-                                                   :normalized-cost normalized-cost
-                                                   :children children}]
-                                     response))
+        build-item (fn [item]
+                     (let [children (mapv item->tree (:composite/contains item))
+                           id (:db/id item)
+                           uuid (:item/uuid item)
+                           name (:item/name item)
+                           yield (:measurement/yield item)
+                           total-children-cost (->> children
+                                                    (map :total-cost)
+                                                    (reduce +))
+                           normalized-cost (or (/ total-children-cost yield) 1)
+                           response {:uuid uuid
+                                     :id id
+                                     :name name
+                                     :yield yield
+                                     :normalized-cost normalized-cost
+                                     :children children}]
+                       response))
 
         build-recipe-line-item (fn [recipe-line-item]
                                  (let [item (item->tree (first (:composite/contains recipe-line-item)))
@@ -54,7 +54,7 @@
                             response))]
 
     (cond
-      (and is-item? has-children?) (build-item-with-children e)
+      (and is-item? has-children?) (build-item e)
       is-recipe-line-item? (build-recipe-line-item e)
       :default (build-base-item e))))
 

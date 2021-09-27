@@ -5,6 +5,7 @@
 
  :dependencies
  [[cljs-ajax "0.8.4"]
+  [com.cognitect/transit-cljs "0.8.269"]
   [datascript "1.2.8"]
   [com.google.guava/guava "25.1-jre"]
   [datascript-transit "0.3.0"]
