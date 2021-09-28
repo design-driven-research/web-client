@@ -8,12 +8,12 @@
 
 (declare process-queue)
 
-(defstate ^{:on-reload :noop} bus
+(defstate bus
   :start (let [c (chan)]
            (js/console.log "Starting event bus")
            c))
 
-(defonce subscriptions (atom []))
+(def subscriptions (atom []))
 
 (defn- unsubscribe!
   [id]

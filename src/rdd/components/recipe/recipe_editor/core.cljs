@@ -3,6 +3,7 @@
             ["@blueprintjs/select" :refer [Select]]
             [applied-science.js-interop :as j]
             [helix.core :refer [$ defnc]]
+            [rdd.converters.uom]
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [rdd.utils.for-indexed :refer [for-indexed]]))
@@ -26,7 +27,6 @@
                                                                    :update-quantity-handler update-quantity-handler
                                                                    :update-recipe-line-item-uom update-recipe-line-item-uom
                                                                    :create-recipe-line-item create-recipe-line-item})))))
-
 
 (defnc UsageControls
   [{:keys [quantity

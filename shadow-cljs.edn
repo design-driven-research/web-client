@@ -11,6 +11,7 @@
   [datascript-transit "0.3.0"]
   [cprop "0.1.18"]
   [nano-id "1.0.0"]
+  [aysylu/loom "1.0.2"]
 
   [applied-science/js-interop "0.3.1"]
   [expound "0.8.9"]

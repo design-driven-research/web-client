@@ -6,7 +6,7 @@
             [datascript.core :as d]
             [nano-id.core :refer [nano-id]]
             [rdd.converters.item :refer [item->tree]]
-            [rdd.services.event-bus :refer [publish!]]))
+            [rdd.services.event-bus :as bus :refer [publish!]]))
 
 (defn item-schema
   []
@@ -16,6 +16,11 @@
 
    #_#_:item/categories {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
    #_#_:item/tags {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
+
+(defn company-schema
+  []
+  {:company/uuid {:db/unique :db.unique/identity}
+   :company/name {:db/unique :db.unique/identity}})
 
 #_(defn category-schema
     []
@@ -49,8 +54,10 @@
 (defn conversions-schema
   []
   {:conversion/uuid  {:db/unique :db.unique/identity}
-   :conversion/from {:db/valueType :db.type/ref}
-   :conversion/to {:db/valueType :db.type/ref}})
+   :conversion/from {:db/valueType :db.type/ref
+                     :db/cardinality :db.cardinality/one}
+   :conversion/to {:db/valueType :db.type/ref
+                   :db/cardinality :db.cardinality/one}})
 
 (defn cost-schema
   []
@@ -68,19 +75,22 @@
 
 (defn schema
   []
-  (merge (item-schema)
-         #_(category-schema)
-         (recipe-line-item-schema)
-         #_(tag-schema)
-         (uom-schema)
-         (conversions-schema)
-         (cost-schema)
-         (measurement-schema)
-         (composite-schema)
-         (reference-schema)
+  (merge
+   #_(category-schema)
+
+   #_(tag-schema)
+   (uom-schema)
+   (conversions-schema)
+   (item-schema)
+   (recipe-line-item-schema)
+   (company-schema)
+   (cost-schema)
+   (measurement-schema)
+   (composite-schema)
+   (reference-schema)
 
 
-         {:schema/version {:version "0.0.1" :doc "Say something"}}))
+   {:schema/version {:version "0.0.1" :doc "Say something"}}))
 
 
 ;; =========================================================================
@@ -131,7 +141,7 @@
   "Seed the db with data"
   [db]
   (d/transact! db (unit-systems-data))
-  (d/transact! db (uom-data)))
+  #_(d/transact! db (uom-data)))
 
 (defn reset-db!
   [conn]
@@ -251,7 +261,106 @@
         (d/transact! conn payload)
         data))))
 
+(defn transact-uom-data!
+  [conn uoms]
+  (let [uoms (for [{:keys [uuid name code type system]} uoms]
+               {:uom/uuid uuid
+                :uom/name name
+                :uom/code code
+                :uom/type type
+                :uom/system system})]
+    (d/transact! conn uoms)))
+
+(defn transact-conversion-data!
+  [conn conversions]
+  (let [conversions (for [{:keys [uuid from to quantity]} conversions]
+                      {:conversion/uuid uuid
+                       :measurement/quantity quantity
+                       :conversion/from [:uom/code from]
+                       :conversion/to [:uom/code to]})]
+    (pm/spy>> :con conversions)
+    (d/transact! conn conversions)))
+
+(defn transact-company-data!
+  [conn companies]
+  (let [companies (for [{:keys [uuid name]} companies]
+                    {:company/uuid uuid
+                     :company/name name})]
+
+    (d/transact! conn companies)))
+
+(defn transact-item-data!
+  [conn items]
+  (let [items (for [{:keys [uuid name yield uom]} items]
+                {:item/uuid uuid
+                 :item/name name
+                 :measurement/yield yield
+                 :measurement/uom [:uom/code uom]})]
+
+    (d/transact! conn items)))
+
+(defn transact-recipe-line-items-data!
+  [conn recipe-line-items]
+  (let [recipe-line-items (for [{:keys [uuid child-uuid parent-uuid quantity uom]} recipe-line-items]
+                            {:recipe-line-item/uuid uuid
+                             :composite/contains [:item/uuid child-uuid]
+                             :measurement/quantity quantity
+                             :measurement/uom [:uom/code uom]})]
+
+    (d/transact! conn recipe-line-items)))
+
+(defn transact-item-recipe-links-data!
+  [conn recipe-line-items]
+  (let [item-recipe-links (for [{:keys [uuid parent-uuid]} recipe-line-items]
+                            [:db/add [:item/uuid parent-uuid] :composite/contains [:recipe-line-item/uuid uuid]])]
+
+    (d/transact! conn item-recipe-links)))
+
+(defn transact-costs-data!
+  [conn costs]
+  (let [costs (for [{:keys [uuid company-uuid cost quantity uom]} costs]
+                {:cost/uuid uuid
+                 :currency.usd/cost cost
+                 :cost/company [:company/uuid company-uuid]
+                 :measurement/quantity quantity
+                 :measurement/uom [:uom/code uom]})]
+
+    (d/transact! conn costs)))
+
 (defn tree->db!
   [data]
   (parse-tree-to->db! @dsdb (:item data))
   (publish! {:topic :remote-db-loaded}))
+
+(defn initial-data->db
+  [data]
+
+  (let [result (:result data)]
+    (transact-uom-data! @dsdb (-> result :data :uoms))
+    (transact-conversion-data! @dsdb (-> result :data :conversions))
+    (transact-company-data! @dsdb (-> result :data :companies))
+    (transact-item-data! @dsdb (-> result :data :items))
+    (transact-recipe-line-items-data! @dsdb (-> result :data :recipe-line-items))
+    (transact-item-recipe-links-data! @dsdb (-> result :data :recipe-line-items))
+    (transact-costs-data! @dsdb (-> result :data :costs)))
+
+  (publish! {:topic :remote-db-loaded}))
+
+(comment
+  (tap> (d/datoms (d/db @dsdb) :avet))
+  (tap> (d/datoms (d/db @dsdb) :eavt))
+
+
+
+  (pm/log-for :con)
+  (pm/log-for :result)
+  (pm/log-for :com-data)
+
+  (pm/reset!)
+  (-> (pm/log-for :result) (first) :data :costs)
+
+  (transact-uom-data! @dsdb (-> (pm/log-for :result) (first) :data :uoms))
+  (-> (pm/log-for :result) (first) :data :uoms)
+
+  ;; 
+  )
