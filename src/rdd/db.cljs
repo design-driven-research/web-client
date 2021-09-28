@@ -20,7 +20,23 @@
 (defn company-schema
   []
   {:company/uuid {:db/unique :db.unique/identity}
-   :company/name {:db/unique :db.unique/identity}})
+   :company/name {:db/unique :db.unique/identity}
+   :company/company-items {:db/valueType :db.type/ref
+                           :db/cardinality :db.cardinality/many}})
+
+(defn company-item-schema
+  []
+  {:company-item/uuid {:db/unique :db.unique/identity}
+   :company-item/name {:db/unique :db.unique/identity}
+   :company-item/sku {:db/unique :db.unique/identity}
+   :company-item/item {:db/valueType :db.type/ref
+                       :db/cardinality :db.cardinality/one}
+   :company-item/quotes {:db/valueType :db.type/ref
+                         :db/cardinality :db.cardinality/many}})
+
+(defn quote-schema
+  []
+  {:quote/uuid {:db/unique :db.unique/identity}})
 
 #_(defn category-schema
     []
@@ -43,9 +59,10 @@
   {:uom/uuid  {:db/unique :db.unique/identity}
    :uom/name {:db/unique :db.unique/identity}
    :uom/code {:db/unique :db.unique/identity}
-
    :uom/type {:db/valueType :db.type/ref}
-   :uom/system {:db/valueType :db.type/ref}})
+   :uom/system {:db/valueType :db.type/ref}
+   :uom/conversions {:db/valueType :db.type/ref
+                     :db/cardinality :db.cardinality/many}})
 
 (defn measurement-schema
   []
@@ -59,38 +76,25 @@
    :conversion/to {:db/valueType :db.type/ref
                    :db/cardinality :db.cardinality/one}})
 
-(defn cost-schema
-  []
-  {:cost/uuid  {:db/unique :db.unique/identity}})
-
 (defn composite-schema
   []
   {:composite/contains  {:db/valueType :db.type/ref
                          :db/cardinality :db.cardinality/many}})
 
-(defn reference-schema
-  []
-  {:for/item  {:db/valueType :db.type/ref
-               :db/cardinality :db.cardinality/one}})
-
 (defn schema
   []
   (merge
-   #_(category-schema)
-
-   #_(tag-schema)
    (uom-schema)
    (conversions-schema)
    (item-schema)
    (recipe-line-item-schema)
    (company-schema)
-   (cost-schema)
+   (quote-schema)
    (measurement-schema)
    (composite-schema)
-   (reference-schema)
 
 
-   {:schema/version {:version "0.0.1" :doc "Say something"}}))
+   {:schema/version {:version "0.0.1" :doc "Main schema"}}))
 
 
 ;; =========================================================================
@@ -109,22 +113,6 @@
    {:db/ident :units.type/WEIGHT}
    {:db/ident :units.type/VOLUME}
    {:db/ident :units.type/CUSTOM}])
-
-(defn uom-data
-  "Units of measure data prepped as datoms for insert"
-  []
-  [{:uom/uuid (nano-id) :uom/name "Pound" :uom/code "lb" :uom/system :units.system/IMPERIAL :uom/type :units.type/WEIGHT :measurement/quantity 453.5920865}
-   {:uom/uuid (nano-id) :uom/name "gr" :uom/code "gr" :uom/system :units.system/METRIC :uom/type :units.type/WEIGHT :measurement/quantity 1}
-   {:uom/uuid (nano-id) :uom/name "Ounce" :uom/code "oz" :uom/system :units.system/IMPERIAL :uom/type :units.type/WEIGHT :measurement/quantity 28.34949978}
-   {:uom/uuid (nano-id) :uom/name "Kilogram" :uom/code "kg" :uom/system :units.system/METRIC :uom/type :units.type/WEIGHT :measurement/quantity 1000}
-
-   {:uom/uuid (nano-id) :uom/name "Gallon" :uom/code "gallon" :uom/system :units.system/IMPERIAL :uom/type :units.type/VOLUME :measurement/quantity 768.0019661}
-   {:uom/uuid (nano-id) :uom/name "Fluid Ounce" :uom/code "floz" :uom/system :units.system/IMPERIAL :uom/type :units.type/VOLUME :measurement/quantity 5.999988}
-   {:uom/uuid (nano-id) :uom/name "Tablespoon" :uom/code "tbs" :uom/system :units.system/IMPERIAL :uom/type :units.type/VOLUME :measurement/quantity 3.000003}
-   {:uom/uuid (nano-id) :uom/name "Cup" :uom/code "cup" :uom/system :units.system/IMPERIAL :uom/type :units.type/VOLUME :measurement/quantity 48.0000768}
-   {:uom/uuid (nano-id) :uom/name "Teaspoon" :uom/code "tsp" :uom/system :units.system/IMPERIAL :uom/type :units.type/VOLUME :measurement/quantity 1}
-
-   {:uom/uuid (nano-id) :uom/name "Each" :uom/code "ea" :uom/system :units.system/CUSTOM :uom/type :units.type/CUSTOM  :measurement/quantity 1}])
 
 (declare reset-db! seed-db setup-listeners)
 
@@ -216,7 +204,6 @@
   [parent-item-id child-item-id]
   (let [new-uuid (nano-id)]
     (d/transact! @dsdb [[:db/add -1 :recipe-line-item/uuid  new-uuid]
-
                         [:db/add -1 :composite/contains child-item-id]
                         [:db/add -1 :measurement/quantity 0]
                         [:db/add parent-item-id :composite/contains -1]])))
@@ -299,6 +286,18 @@
 
     (d/transact! conn items)))
 
+(defn transact-company-item-data!
+  [conn company-items]
+  (let [company-items (for [{:keys [:uuid :item-uuid :name :description :sku :company-item-quote-uuid]} company-items]
+                        {:company-item/uuid uuid
+                         :company-item/name name
+                         :info/description description
+                         :company-item/sku sku
+                         :company-item/item [:item/uuid item-uuid]
+                         :company-item-quote-uuid [:quote/uuid company-item-quote-uuid]})]
+
+    (d/transact! conn company-items)))
+
 (defn transact-recipe-line-items-data!
   [conn recipe-line-items]
   (let [recipe-line-items (for [{:keys [uuid child-uuid parent-uuid quantity uom]} recipe-line-items]
@@ -316,16 +315,17 @@
 
     (d/transact! conn item-recipe-links)))
 
-(defn transact-costs-data!
-  [conn costs]
-  (let [costs (for [{:keys [uuid company-uuid cost quantity uom]} costs]
-                {:cost/uuid uuid
-                 :currency.usd/cost cost
-                 :cost/company [:company/uuid company-uuid]
-                 :measurement/quantity quantity
-                 :measurement/uom [:uom/code uom]})]
+(defn transact-quote-data!
+  [conn quotes]
+  (let [quotes (for [{:keys [:uuid :valid-from :valid-to :cost :uom :quantity]} quotes]
+                 {:quote/uuid uuid
+                  :currency.usd/quote cost
+                  :date/valid-from valid-from
+                  :date/valid-to valid-to
+                  :measurement/quantity quantity
+                  :measurement/uom [:uom/code uom]})]
 
-    (d/transact! conn costs)))
+    (d/transact! conn quotes)))
 
 (defn tree->db!
   [data]
@@ -338,18 +338,24 @@
   (let [result (:result data)]
     (transact-uom-data! @dsdb (-> result :data :uoms))
     (transact-conversion-data! @dsdb (-> result :data :conversions))
-    (transact-company-data! @dsdb (-> result :data :companies))
     (transact-item-data! @dsdb (-> result :data :items))
     (transact-recipe-line-items-data! @dsdb (-> result :data :recipe-line-items))
     (transact-item-recipe-links-data! @dsdb (-> result :data :recipe-line-items))
-    (transact-costs-data! @dsdb (-> result :data :costs)))
+
+    (transact-quote-data! @dsdb (-> result :data :quotes))
+    (transact-company-item-data! @dsdb (-> result :data :company-items))
+    (transact-company-data! @dsdb (-> result :data :companies))
+
+    ;; 
+    )
 
   (publish! {:topic :remote-db-loaded}))
 
 (comment
+
+
   (tap> (d/datoms (d/db @dsdb) :avet))
   (tap> (d/datoms (d/db @dsdb) :eavt))
-
 
 
   (pm/log-for :con)
