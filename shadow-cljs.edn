@@ -4,28 +4,34 @@
   "resources"]
 
  :dependencies
- [[julianbirch/cljs-ajax "0.8.4"]
+ [[cljs-ajax "0.8.4"]
   [com.cognitect/transit-cljs "0.8.269"]
-  [tonsky/datascript "1.2.8"]
+  [datascript "1.2.8"]
   [com.google.guava/guava "25.1-jre"]
-  [tonsky/datascript-transit "0.3.0"]
-  [tolitius/cprop "0.1.18"]
+  [datascript-transit "0.3.0"]
+  [cprop "0.1.18"]
+  [nano-id "1.0.0"]
   [aysylu/loom "1.0.2"]
+
   [applied-science/js-interop "0.3.1"]
-  [bhb/expound "0.8.9"]
+  [expound "0.8.9"]
   [funcool/struct "1.4.0"]
   [aysylu/loom "1.0.2"]
   [com.taoensso/sente "1.16.2"]
   [io.rkn/conformity "0.5.1"]
-  [yogthos/json-html "0.4.7"]
+  [json-html "0.4.7"]
+
   [com.taoensso/timbre "5.1.2"]
-  [athos/postmortem "0.5.0"]
+  [postmortem "0.5.0"]
   [lilactown/helix "0.1.3"]
-  [zelark/nano-id "1.0.0"]
+  [nano-id "1.0.0"]
   [metosin/muuntaja "0.6.8"]
   [metosin/reitit "0.5.13"]
-  [tolitius/mount "0.1.16"]
-  [nrepl/nrepl "0.8.3"]
+  [mount "0.1.16"]
+  [nrepl "0.8.3"]
+
+
+
   [org.clojure/core.async "1.3.622"]]
 
  :dev-http {4200 "public"}

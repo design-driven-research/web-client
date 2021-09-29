@@ -332,6 +332,8 @@
   (parse-tree-to->db! @dsdb (:item data))
   (publish! {:topic :remote-db-loaded}))
 
+;; @TODO: We need to convert everything to the db keys, all these need to be updated.
+;; Try to see if we can just pass these directly in and reduce any mismatch or remapping down the road
 (defn initial-data->db
   [data]
 
@@ -352,6 +354,7 @@
   (publish! {:topic :remote-db-loaded}))
 
 (comment
+
 
 
   (tap> (d/datoms (d/db @dsdb) :avet))
