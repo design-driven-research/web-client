@@ -2,11 +2,8 @@
   (:require-macros
    [mount.core :refer [defstate]])
   (:require [clojure.edn]
-            [postmortem.core :as pm]
             [datascript.core :as d]
             [rdd.db.transformers.tx-transforms :refer [initial-remote->tx-data]]
-            [nano-id.core :refer [nano-id]]
-
             [rdd.services.event-bus :as bus :refer [publish!]]))
 
 (defn item-schema
@@ -47,7 +44,9 @@
 
 (defn recipe-line-item-schema
   []
-  {:recipe-line-item/uuid  {:db/unique :db.unique/identity}})
+  {:recipe-line-item/uuid  {:db/unique :db.unique/identity}
+   :recipe-line-item/company-item {:db/valueType :db.type/ref
+                                   :db/cardinality :db.cardinality/one}})
 
 #_(defn tag-schema
     []
@@ -102,10 +101,13 @@
 ;; SEED DATA
 ;; =========================================================================
 ;; =========================================================================
-(defn unit-systems-data
+(defn enum-data
   "System of units data prepped as datoms for insert"
   []
-  [{:db/ident :units.system/IMPERIAL}
+  [{:db/ident :production.type/ATOM}
+   {:db/ident :production.type/COMPOSITE}
+
+   {:db/ident :units.system/IMPERIAL}
    {:db/ident :units.system/METRIC}
 
    {:db/ident :units.system/CUSTOM}
@@ -128,7 +130,7 @@
 (defn seed-db
   "Seed the db with data"
   [db]
-  (d/transact! db (unit-systems-data)))
+  (d/transact! db (enum-data)))
 
 (defn reset-db!
   [conn]
@@ -141,65 +143,9 @@
                              (publish! {:topic :db-updated
                                         :data db}))))
 
-(defn get-item-uuid-by-eid
-  [db eid]
-  (->> (d/q '[:find [?uuid]
-              :in $ ?id
-              :where [?id :item/uuid ?uuid]]
-            db eid)
-       first))
-
-(defn get-rli-uuid-by-eid
-  [db eid]
-  (->> (d/q '[:find [?uuid]
-              :in $ ?id
-              :where [?id :recipe-line-item/uuid ?uuid]]
-            db eid)
-       first))
-
-;; (defn update-item-name!
-;;   [name]
-;;   (let [new-name (str (random-uuid))]
-;;     (d/transact! @dsdb [[:db/add [:item/name name] :item/name new-name]])))
-
-(defn update-recipe-line-item-quantity!
-  [recipe-line-item-id qty]
-  (let [parsed-quantity (js/parseFloat qty)
-        prepped-quantity (if (and (number? parsed-quantity)
-                                  (>= parsed-quantity 0))
-                           parsed-quantity
-                           0)
-        has-recipe-line-item-id? recipe-line-item-id]
-    (when has-recipe-line-item-id?
-      (let [tx (d/transact! @dsdb [[:db/add recipe-line-item-id :measurement/quantity prepped-quantity]])
-            new-db (:db-after tx)]
-
-        (publish! {:topic :update/recipe-line-item
-                   :data {:quantity prepped-quantity
-                          :uuid (get-rli-uuid-by-eid new-db recipe-line-item-id)}})
-        new-db))))
 
 
-(defn update-recipe-line-item-uom!
-  [recipe-line-item-id uom-code]
-  (let [has-recipe-line-item-id? recipe-line-item-id]
-    (when has-recipe-line-item-id?
 
-      (let [tx (d/transact! @dsdb [[:db/add recipe-line-item-id :measurement/uom [:uom/code uom-code]]])
-            new-db (:db-after tx)]
-
-        (publish! {:topic :update/recipe-line-item
-                   :data {:uom uom-code
-                          :uuid (get-rli-uuid-by-eid new-db recipe-line-item-id)}})
-        new-db))))
-
-(defn create-recipe-line-item!
-  [parent-item-id child-item-id]
-  (let [new-uuid (nano-id)]
-    (d/transact! @dsdb [[:db/add -1 :recipe-line-item/uuid  new-uuid]
-                        [:db/add -1 :composite/contains child-item-id]
-                        [:db/add -1 :measurement/quantity 0]
-                        [:db/add parent-item-id :composite/contains -1]])))
 
 ;; (defn parse-tree-to->db!
 ;;   [conn data]

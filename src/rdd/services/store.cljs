@@ -1,6 +1,9 @@
 (ns rdd.services.store
   (:require [clojure.set]
+            [postmortem.core :as pm]
+            [rdd.services.event-bus :as eb]
             [datascript.core :as d]
+            [nano-id.core :refer [nano-id]]
             [rdd.converters.item :as item-converter]
             [rdd.converters.uom :as uom-converters]
             [rdd.db :as db-core]))
@@ -128,8 +131,9 @@
       (* to-quantity normalized-cost)
       (let [conversion (item-quantity-in-uom item-uuid to-quantity to-uom-code uom)
             converted-cost (* (:total conversion) normalized-cost)]
-        converted-cost))))
-
+        (if (js/Number.isNaN converted-cost)
+          nil
+          converted-cost)))))
 
 (defn- item->tree'
   [e]
@@ -139,55 +143,67 @@
 
         build-item (fn [item]
                      (let [children (mapv item->tree' (:composite/contains item))
-                           id (:db/id item)
-                           uuid (:item/uuid item)
-                           name (:item/name item)
-                           yield (:measurement/yield item)
+                           item-production-type (:item/production-type item)
+                           item-uuid (:item/uuid item)
+                           item-name (:item/name item)
+                           item-yield (:measurement/yield item)
+                           item-yield-uom (-> item :measurement/uom :uom/code)
                            total-children-cost (->> children
-                                                    (map :total-cost)
+                                                    (map :recipe-line-item-total-cost)
                                                     (reduce +))
-                           normalized-cost (or (/ total-children-cost yield) 1)
-                           response {:uuid uuid
-                                     :id id
-                                     :name name
-                                     :yield yield
-                                     :normalized-cost normalized-cost
-                                     :children children}]
-                       response))
+                           cost-per-uom (/ total-children-cost item-yield)]
+                       {:item-uuid item-uuid
+
+                        :item-name item-name
+                        :item-production-type item-production-type
+                        :item-yield item-yield
+                        :item-yield-uom item-yield-uom
+                        :cost-per-uom cost-per-uom
+                        :item-total-cost total-children-cost
+                        :children children}))
 
         build-recipe-line-item (fn [recipe-line-item]
                                  (let [item (item->tree' (first (:composite/contains recipe-line-item)))
+                                       item-uuid (:item-uuid item)
+
                                        recipe-line-item-uuid (:recipe-line-item/uuid recipe-line-item)
                                        recipe-line-item-id (:db/id recipe-line-item)
-                                       quantity (:measurement/quantity recipe-line-item)
-                                       uom (-> recipe-line-item :measurement/uom :uom/code)
-                                       total-cost (* quantity (:normalized-cost item))
-                                       response (merge item {:recipe-line-item-uuid recipe-line-item-uuid
-                                                             :recipe-line-item-id recipe-line-item-id
-                                                             :quantity quantity
-                                                             :total-cost total-cost
-                                                             :uom uom})]
-                                   response))
+                                       recipe-line-item-quantity (:measurement/quantity recipe-line-item)
+                                       recipe-line-item-quantity-uom (-> recipe-line-item :measurement/uom :uom/code)
+
+                                      ;;  Should we instead check for if this is composite or atom type item?
+                                      ;;  Need to simplify this
+                                       child-uom->rli-uom-conversion (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom (:item-yield-uom item)))
+                                       converted-composite-item-cost (* (:cost-per-uom item) child-uom->rli-uom-conversion)
+
+                                       recipe-line-item-total-cost (or
+                                                                    converted-composite-item-cost
+                                                                    (cost-for-qty item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom))]
+
+                                   (merge item {:recipe-line-item-uuid recipe-line-item-uuid
+                                                :recipe-line-item-id recipe-line-item-id
+                                                :recipe-line-item-quantity recipe-line-item-quantity
+                                                :recipe-line-item-total-cost recipe-line-item-total-cost
+                                                :recipe-line-item-quantity-uom recipe-line-item-quantity-uom})))
 
         build-base-item (fn [item]
-                          (let [id (:db/id item)
-                                uuid (:item/uuid item)
-                                name (:item/name item)
-                                yield (:measurement/yield item)
-                                uom (-> item :measurement/uom :uom/code)
-                                cost-per-yield 1
-                                normalized-cost (/ cost-per-yield yield)
-                                response {:uuid uuid
-                                          :id id
-                                          :uom uom
-                                          :normalized-cost normalized-cost
-                                          :name name}]
-                            response))]
+                          (let [item-uuid (:item/uuid item)
+                                item-production-type (:item/production-type item)
+                                item-name (:item/name item)
+                                item-yield (:measurement/yield item)
+                                item-yield-uom (-> item :measurement/uom :uom/code)
+                                cost-per-uom (cost-for-qty item-uuid 1 item-yield-uom)]
+                            {:item-uuid item-uuid
+                             :item-production-type item-production-type
+                             :item-name item-name
+                             :item-yield item-yield
+                             :item-yield-uom item-yield-uom
+                             :cost-per-uom cost-per-uom}))]
 
     (cond
       (and is-item? has-children?) (build-item e)
       is-recipe-line-item? (build-recipe-line-item e)
-      :default (build-base-item e))))
+      :else (build-base-item e))))
 
 (defn item->tree
   [name]
@@ -195,7 +211,65 @@
     (when item-entity
       (item->tree' item-entity))))
 
+
+(defn update-recipe-line-item-quantity!
+  [recipe-line-item-uuid qty]
+  (let [parsed-quantity (js/parseFloat qty)
+        prepped-quantity (if (and (number? parsed-quantity)
+                                  (>= parsed-quantity 0))
+                           parsed-quantity
+                           0)
+        has-recipe-line-item-uuid? recipe-line-item-uuid]
+    (when has-recipe-line-item-uuid?
+      (let [tx (d/transact! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
+            new-db (:db-after tx)]
+
+        (eb/publish! {:topic :update/recipe-line-item
+                      :data {:quantity prepped-quantity
+                             :uuid recipe-line-item-uuid}})
+        new-db))))
+
+(defn get-item-uuid-by-eid
+  [db eid]
+  (->> (d/q '[:find [?uuid]
+              :in $ ?id
+              :where [?id :item/uuid ?uuid]]
+            db eid)
+       first))
+
+(defn get-rli-uuid-by-eid
+  [db eid]
+  (->> (d/q '[:find [?uuid]
+              :in $ ?id
+              :where [?id :recipe-line-item/uuid ?uuid]]
+            db eid)
+       first))
+
+(defn update-recipe-line-item-uom!
+  [recipe-line-item-id uom-code]
+  (let [has-recipe-line-item-id? recipe-line-item-id]
+    (when has-recipe-line-item-id?
+
+      (let [tx (d/transact! (conn) [[:db/add recipe-line-item-id :measurement/uom [:uom/code uom-code]]])
+            new-db (:db-after tx)]
+
+        (eb/publish! {:topic :update/recipe-line-item
+                      :data {:uom uom-code
+                             :uuid (get-rli-uuid-by-eid new-db recipe-line-item-id)}})
+        new-db))))
+
+(defn create-recipe-line-item!
+  [parent-item-id child-item-id]
+  (let [new-uuid (nano-id)]
+    (d/transact! (conn) [[:db/add -1 :recipe-line-item/uuid  new-uuid]
+                         [:db/add -1 :composite/contains child-item-id]
+                         [:db/add -1 :measurement/quantity 0]
+                         [:db/add parent-item-id :composite/contains -1]])))
+
 (comment
+  (item-quantity-in-uom "AMRGozwKdaHB3UAustIja" 1 "gr" "gr")
+
+  (pm/reset!)
 
   (item-quantity-in-uom "1uXwh_BaxU7BaWroGtHXA" 5 "lb" "gr")
   ;; => {:quantity 5, :from "lb", :to "gr", :factor 453.1, :total 2265.5}

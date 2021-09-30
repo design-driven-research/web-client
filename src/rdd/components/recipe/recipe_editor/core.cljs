@@ -13,10 +13,12 @@
 
 (defnc Editor
   [{:keys [item
-           update-quantity-handler
+           update-recipe-line-item-quantity-handler
            update-recipe-line-item-uom
            create-recipe-line-item]
     {:keys [children]} :item}]
+
+  (tap> item)
 
   (let [has-children? (seq children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
@@ -24,46 +26,69 @@
            (d/p {:class "text-lg"} "Line items")
            (when has-children?
              ($ rdd.components.recipe.recipe-editor.core/Children {:item item
-                                                                   :update-quantity-handler update-quantity-handler
+                                                                   :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler
                                                                    :update-recipe-line-item-uom update-recipe-line-item-uom
                                                                    :create-recipe-line-item create-recipe-line-item})))))
 
 (defnc UsageControls
-  [{:keys [quantity
-           recipe-line-item-id
-           update-quantity-handler
+  [{:keys [recipe-line-item-quantity
+           item-yield
+           recipe-line-item-uuid
+           update-recipe-line-item-quantity-handler
            update-recipe-line-item-uom
-           uom]}]
+           item-yield-uom
+           recipe-line-item-quantity-uom]}]
 
-  (let [uom-selected-handler (hooks/use-callback :once (fn [uom]
-                                                         (update-recipe-line-item-uom recipe-line-item-id (.. uom -title))))
+  (let [recipe-line-item-quantity-uom-selected-handler (hooks/use-callback :once (fn [uom]
+                                                                                   (update-recipe-line-item-uom recipe-line-item-uuid (.. uom -title))))
 
-        uomRenderer (hooks/use-memo :once (fn [item opts]
-                                            (j/let [^js {:keys [title]} item]
-                                              ($ MenuItem {:onClick (fn [_] (uom-selected-handler item))
-                                                           :active (j/get-in opts [:modifiers :active])
-                                                           :key title
-                                                           :text title}))))
+        item-yield-uom-renderer (hooks/use-memo :once (fn [item opts]
+                                                        (j/let [^js {:keys [title]} item]
+                                                          ($ MenuItem {:onClick (fn [_] (recipe-line-item-quantity-uom-selected-handler item))
+                                                                       :active (j/get-in opts [:modifiers :active])
+                                                                       :key title
+                                                                       :text title}))))
 
         pred-filter (hooks/use-memo :once (fn [query film index exactMatch]
                                             (if (empty? query)
                                               true
                                               (re-find (re-pattern query) (.. film -title)))))]
+
     (d/div {:class "item-quantity flex items-center"}
            (d/div {:class "mr-2"}
-                  ($ InputGroup {:value quantity
+
+                  ($ InputGroup {:value recipe-line-item-quantity
                                  :small true
-                                 :onChange #(update-quantity-handler recipe-line-item-id (.. % -target -value))}))
+                                 :onChange #(update-recipe-line-item-quantity-handler recipe-line-item-uuid (.. % -target -value))})
+
+                  ($ InputGroup {:value item-yield
+                                 :small true
+                                 :onChange #(update-recipe-line-item-quantity-handler recipe-line-item-uuid (.. % -target -value))}))
+
            (d/div {:class "border-2"}
                   ($ Select {:popoverProps (j/lit {:minimal true})
-                             :itemRenderer uomRenderer
+                             :itemRenderer item-yield-uom-renderer
                              :itemPredicate pred-filter
-                             :onItemSelect uom-selected-handler
+                             :onItemSelect recipe-line-item-quantity-uom-selected-handler
                              :tagRenderer (fn [item]
                                             (:title item))
                              :items (j/lit [{:title "gr"}
                                             {:title "lb"}])}
-                     ($ Button {:text uom
+                     ($ Button {:text recipe-line-item-quantity-uom
+                                :small true
+                                :minimal true
+                                :rightIcon "double-caret-vertical"})))
+
+           (d/div {:class "border-2"}
+                  ($ Select {:popoverProps (j/lit {:minimal true})
+                             :itemRenderer item-yield-uom-renderer
+                             :itemPredicate pred-filter
+                             :onItemSelect recipe-line-item-quantity-uom-selected-handler
+                             :tagRenderer (fn [item]
+                                            (:title item))
+                             :items (j/lit [{:title "gr"}
+                                            {:title "lb"}])}
+                     ($ Button {:text item-yield-uom
                                 :small true
                                 :minimal true
                                 :rightIcon "double-caret-vertical"}))))))
@@ -71,10 +96,20 @@
 (defnc Item
   [{:keys [item
            index
-           update-quantity-handler
+           update-recipe-line-item-quantity-handler
            update-recipe-line-item-uom
            create-recipe-line-item]
-    {:keys [id uuid name quantity recipe-line-item-id uom total-cost children]} :item}]
+
+    {:keys [item-uuid
+            item-name
+            item-production-type
+            recipe-line-item-quantity
+            item-yield
+            recipe-line-item-uuid
+            item-yield-uom
+            recipe-line-item-quantity-uom
+            recipe-line-item-total-cost
+            children]} :item}]
 
   ;; Wrap this to force memo to use equility instead of identical. It's slower to check but stops rerenders
   {:wrap [(helix.core/memo =)]}
@@ -97,29 +132,35 @@
                   (d/div {:class "flex items-center justify-between w-full p-2"}
                          (d/div {:class "flex w-1/2 items-center"}
                                 ($ :span {:class "w-2/12"} (str index "."))
-                                ($ :span {:class "w-6/12"} (str name))
-                                ($ :span {:class "w-4/12"} total-cost)
+                                ($ :span {:class "w-6/12"} (str item-name))
+                                ($ :span {:class "w-6/12"} (str item-production-type))
+                                ($ :span {:class "w-4/12"} recipe-line-item-total-cost)
                                 #_($ Button {:text "Add"
                                              :onClick (fn []
                                                         (create-recipe-line-item id 17))}))
-                         ($ UsageControls {:update-quantity-handler update-quantity-handler
-                                           :update-recipe-line-item-uom update-recipe-line-item-uom
-                                           :recipe-line-item-id recipe-line-item-id
-                                           :quantity quantity
-                                           :uom uom})))
+                         ($ UsageControls {:item-yield item-yield
+                                           :item-yield-uom item-yield-uom
+
+                                           :recipe-line-item-uuid recipe-line-item-uuid
+                                           :recipe-line-item-quantity recipe-line-item-quantity
+
+                                           :recipe-line-item-quantity-uom recipe-line-item-quantity-uom
+
+                                           :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler
+                                           :update-recipe-line-item-uom update-recipe-line-item-uom})))
 
            (when (and has-children?
                       is-open?)
              ($ :div
                 ($ rdd.components.recipe.recipe-editor.core/Children {:item item
-                                                                      :update-quantity-handler update-quantity-handler
+                                                                      :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler
                                                                       :update-recipe-line-item-uom update-recipe-line-item-uom
                                                                       :create-recipe-line-item create-recipe-line-item}))))))
 
 
 
 (defnc Children
-  [{:keys [update-quantity-handler
+  [{:keys [update-recipe-line-item-quantity-handler
            update-recipe-line-item-uom
            create-recipe-line-item]
     {:keys [children]} :item}]
@@ -130,11 +171,11 @@
          (d/div {:class "flex flex-col w-full"}
                 (for-indexed [child index children]
                              ($ rdd.components.recipe.recipe-editor.core/Item
-                                {:key (:id child)
+                                {:key (:item-uuid child)
                                  :index (inc index)
                                  :item child
                                  :create-recipe-line-item create-recipe-line-item
                                  :update-recipe-line-item-uom update-recipe-line-item-uom
-                                 :update-quantity-handler update-quantity-handler})))))
+                                 :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler})))))
 
 

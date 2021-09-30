@@ -45,10 +45,12 @@
            :measurement/keys [yield uom]} item
           uom-temp-id (-> uom :uom/uuid)
           children (-> item :composite/contains)
-          rli-temp-ids (map :recipe-line-item/uuid children)]
+          rli-temp-ids (map :recipe-line-item/uuid children)
+          production-type (-> item :item/production-type :db/ident)]
       {:db/id uuid
        :item/uuid uuid
        :item/name name
+       :item/production-type production-type
        :measurement/yield yield
        :measurement/uom uom-temp-id
        :composite/contains rli-temp-ids})))

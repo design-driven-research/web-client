@@ -1,8 +1,7 @@
 (ns rdd.hooks.use-item-reducer
   (:require [helix.hooks :as hooks]
-            [rdd.db :as db]
-            [rdd.services.store :as store]
-            [rdd.reducers.recipe-editor-reducer :as rer]))
+            [rdd.reducers.recipe-editor-reducer :as rer]
+            [rdd.services.store :as store]))
 
 (defn use-item-reducer
   [product-name]

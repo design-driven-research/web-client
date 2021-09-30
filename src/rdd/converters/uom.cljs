@@ -47,7 +47,11 @@
    Returns error map if no path is found: {:has-error? true, :error-msg 'No path was found between :case and :lbs'}"
   [quantity from to mapping]
   (if (= from to)
-    quantity
+    {:quantity quantity
+     :from from
+     :to to
+     :factor 1
+     :total quantity}
     (let [graph (g/graph mapping)
           path (alg/bf-path graph from to)
           missing-path? (nil? path)

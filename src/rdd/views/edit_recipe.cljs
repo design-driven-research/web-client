@@ -23,7 +23,7 @@
 
         {:keys [handleKeyDown handleKeyUp]} (useHotkeys hotkeys)
 
-        update-quantity-handler (builder :update-recipe-line-item-quantity [product-name])
+        update-recipe-line-item-quantity-handler (builder :update-recipe-line-item-quantity [product-name])
         update-recipe-line-item-uom (builder :update-recipe-line-item-uom [product-name])
         create-recipe-line-item (builder :create-recipe-line-item [product-name])]
 
@@ -40,4 +40,4 @@
        ($ recipe-editor/Editor {:item item
                                 :update-recipe-line-item-uom update-recipe-line-item-uom
                                 :create-recipe-line-item create-recipe-line-item
-                                :update-quantity-handler update-quantity-handler}))))
+                                :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler}))))
