@@ -97,7 +97,8 @@
                   (d/div {:class "flex items-center justify-between w-full p-2"}
                          (d/div {:class "flex w-1/2 items-center"}
                                 ($ :span {:class "w-2/12"} (str index "."))
-                                ($ :span {:class "w-10/12"} (str name))
+                                ($ :span {:class "w-6/12"} (str name))
+                                ($ :span {:class "w-4/12"} total-cost)
                                 #_($ Button {:text "Add"
                                              :onClick (fn []
                                                         (create-recipe-line-item id 17))}))

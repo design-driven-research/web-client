@@ -9,4 +9,4 @@
   []
   (d/div {:class "mb-4 flex justify-end"}
          ($ Button {:icon "download"
-                    :onClick (fn [] (store/item-by-name "Chorizo Family Pack"))} "Download recipe")))
+                    :onClick (fn [] (store/item->tree "Wrap"))} "Download recipe")))

@@ -1,12 +1,13 @@
 (ns rdd.hooks.use-item-reducer
   (:require [helix.hooks :as hooks]
             [rdd.db :as db]
+            [rdd.services.store :as store]
             [rdd.reducers.recipe-editor-reducer :as rer]))
 
 (defn use-item-reducer
   [product-name]
   (let [initial-state {:current-product-name product-name
-                       :item (db/item-by-name product-name)}
+                       :item (store/item->tree product-name)}
         [state dispatch!] (hooks/use-reducer rer/reducer initial-state)
         builder (fn [topic invalidation-keys & {:keys [middleware]}]
                   (hooks/use-callback

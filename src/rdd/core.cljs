@@ -6,14 +6,14 @@
             [rdd.db]
             [rdd.services.syncer]
             [helix.hooks]
-            [rdd.subscriptions.item]
+            [rdd.subscriptions]
             [rdd.services.store]
             [rdd.views.edit-recipe :as erv]
             ["react-dom" :as rdom]
             ["@blueprintjs/core" :refer [HotkeysProvider]]))
 
 (defnc app []
-  (let [product-name "Chorizo Family Pack"]
+  (let [product-name "Wrap"]
     ($ HotkeysProvider ($ :div
                           ($ nav-bar)
                           ($ erv/view {:product-name product-name})))))

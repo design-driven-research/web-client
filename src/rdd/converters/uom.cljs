@@ -1,232 +1,68 @@
 (ns rdd.converters.uom
-  (:require [datascript.core :as d]
-            [rdd.db :as db-core]
-            [loom.graph :as g]
-            [loom.alg :as alg]))
+  (:require [clojure.set]
+            [goog.string :as gstring]
+            [goog.string.format]
+            [loom.alg :as alg]
+            [loom.graph :as g]))
 
-(defn uom->uom-factor
-  "Returns the factor of converting units from and to"
-  [from to db]
+(defn generate-conversions-lookup-table
+  "Takes a set of conversions and generates a lookup table. 
+   
+   Required keys for each entry: :from-uom-code :to-uom-code :quantity
+   
+   #{{:conversion-uuid 'Nhs-KWvQjyf-D2YMZM7bP', :from-uom-code 'kg', :to-uom-code 'gr', :quantity 1000}
+     {:conversion-uuid 'ZqGv_fqNsZw0Zem7F2mLm', :from-uom-code 'gr', :to-uom-code 'gr', :quantity 1}
+     {:conversion-uuid 'HrsYuIva9akIEH_0fQiGG', :from-uom-code 'pallet', :to-uom-code 'case', :quantity 50}
+     {:conversion-uuid 'OciR1EXFmdsYe075q3szn', :from-uom-code 'lb', :to-uom-code 'gr', :quantity 453.1}
+     {:conversion-uuid '9NpI7YvNXdjqeu9yNM9NT', :from-uom-code 'case', :to-uom-code 'lb', :quantity 25}}
+   
+   Returns:
 
-;;   
-  )
+   {'gr' {'kg' 0.001, 'gr' 1, 'lb' 0.0022070183182520413}
+    'kg' {'gr' 1000}
+    'lb' {'gr' 453.1, 'case' 0.04}
+    'case' {'lb' 25, 'pallet' 0.02}
+    'pallet' {'case' 50}}
+   
+   Example:
+   ```clojure
+   (generate-conversions-lookup-table conversions)
+   ```
+   "
+  [conversions]
+  (reduce
+   (fn
+     [acc {:keys [from-uom-code to-uom-code quantity]}]
+     (-> (assoc-in acc [to-uom-code from-uom-code] (/ 1 quantity))
+         (assoc-in [from-uom-code to-uom-code] quantity)))
+   {} conversions))
 
-(-> (d/entity (d/db @db-core/dsdb) [:uom/code "gr"]))
+(defn quantity-in-uom
+  "Convert quantity from one UOM or a different UOM based on the conversion passed in.
+   
+   Example: (quantity-in-uom 5 :case :lb conversions)
+   
+   Returns: {:quantity 5, :from :case, :to :lb, :factor 25, :total 125}
 
-#_(d/entity (d/db @db-core/dsdb) [:conversion/from [:uom/code "gr"]])
-
-(d/q '[:find ?conversion-uuid
-       :where
-       [?uom :uom/code "kg"]
-       [?conversion :conversion/from ?uom]
-       [?conversion :conversion/uuid ?conversion-uuid]] (d/db @db-core/dsdb))
-
-(defn uoms []
-  (d/q '[:find ?from-uom-code ?to-uom-code ?quantity
-         :keys :from :to :quantity
-         :where
-         [?conversion :measurement/quantity ?quantity]
-         [?conversion :conversion/from ?from-uom]
-         [?from-uom :uom/code ?from-uom-code]
-
-         [?conversion :conversion/to ?to-uom]
-         [?to-uom :uom/code ?to-uom-code]
-
-      ;;  
-         ](d/db @db-core/dsdb)))
-
-
-(d/q '[:find ?cei ?name ?uuid
-       :where [?cei :company-item/uuid ?uuid]
-       [?cei :company-item/item ?item]
-       [?item :item/name ?name]]
-     (d/db @db-core/dsdb))
-;; => #{[78 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [93 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [99 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [102 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [90 "Salt" "RMs3zx5AWyacVpcZsLArx"]
-;;      [105 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [97 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [91 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [108 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [92 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [88 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [69 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [67 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [83 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [77 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [64 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]
-;;      [63 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [82 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]
-;;      [95 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [71 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [101 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [100 "Salt" "xl8g4FhlMrbokoAlIsB7J"]
-;;      [109 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [89 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [81 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [98 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]
-;;      [87 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [96 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [104 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [76 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]
-;;      [68 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [66 "Salt" "xl8g4FhlMrbokoAlIsB7J"]
-;;      [86 "Onion Powder" "iAzAtN8k3lmDvP9quV0RO"]
-;;      [106 "Salt" "RMs3zx5AWyacVpcZsLArx"]
-;;      [103 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [75 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [70 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [94 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]
-;;      [65 "Pepper" "qde5W99qK9ZPybCXl2lRo"]
-;;      [111 "Pearl Dust" "xUWXUy4P6x3FS1kgbpXZ3"]
-;;      [112 "Turmeric" "Wrdv0iZqdUdFPwmEXSRnL"]
-;;      [84 "Salt" "xl8g4FhlMrbokoAlIsB7J"]
-;;      [74 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [73 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [72 "Salt" "RMs3zx5AWyacVpcZsLArx"]
-;;      [85 "Garlic Powder" "3HGZvZdsy7kVwfh0sAaro"]
-;;      [107 "Bay Leaves" "QHjCk1ci7hkc4AqNnY29F"]
-;;      [110 "Asafoetida" "_t0H4z3PP_ub0bKRtDfgT"]}
-
-;; => #{[105 "Onion Powder"]
-;;      [67 "Garlic Powder"]
-;;      [92 "Bay Leaves"]
-;;      [94 "Asafoetida"]
-;;      [82 "Asafoetida"]
-;;      [70 "Pepper"]
-;;      [106 "Salt"]
-;;      [77 "Pearl Dust"]
-;;      [112 "Turmeric"]
-;;      [81 "Pearl Dust"]
-;;      [93 "Turmeric"]
-;;      [73 "Bay Leaves"]
-;;      [64 "Asafoetida"]
-;;      [66 "Salt"]
-;;      [97 "Pearl Dust"]
-;;      [87 "Garlic Powder"]
-;;      [109 "Turmeric"]
-;;      [78 "Turmeric"]
-;;      [102 "Onion Powder"]
-;;      [98 "Asafoetida"]
-;;      [68 "Onion Powder"]
-;;      [96 "Turmeric"]
-;;      [86 "Onion Powder"]
-;;      [100 "Salt"]
-;;      [101 "Garlic Powder"]
-;;      [103 "Garlic Powder"]
-;;      [111 "Pearl Dust"]
-;;      [76 "Asafoetida"]
-;;      [104 "Pepper"]
-;;      [84 "Salt"]
-;;      [88 "Pepper"]
-;;      [95 "Pearl Dust"]
-;;      [89 "Onion Powder"]
-;;      [83 "Pepper"]
-;;      [99 "Pepper"]
-;;      [72 "Salt"]
-;;      [85 "Garlic Powder"]
-;;      [69 "Garlic Powder"]
-;;      [110 "Asafoetida"]
-;;      [107 "Bay Leaves"]
-;;      [75 "Turmeric"]
-;;      [90 "Salt"]
-;;      [71 "Onion Powder"]
-;;      [63 "Pearl Dust"]
-;;      [108 "Bay Leaves"]
-;;      [65 "Pepper"]
-;;      [74 "Bay Leaves"]
-;;      [91 "Bay Leaves"]}
-
-
-
-(g/nodes (g/graph ["kg" "gr" 1000] ["gr" "gr" 1] ["lb" "gr" 453.1]))
-
-
-(def g-2 (g/graph [{:from "pallet" :to "case" :qty 5} {:from "case" :to "kg" :qty 5}]
-                  [{:from "case" :to "kg" :qty 5} {:from "kg" :to "lb" :qty 5}]
-                  [{:from "kg" :to "lb" :qty 5} {:from "lb" :to "gr" :qty 453}]))
-
-(g/nodes g-2)
-(g/edges g-2)
-(alg/bf-path g-2 {:from "pallet", :to "case", :qty 5} {:from "lb", :to "gr", :qty 453})
-;; => ({:from "pallet", :to "case", :qty 5}
-;;     {:from "case", :to "kg", :qty 5}
-;;     {:from "kg", :to "lb", :qty 5}
-;;     {:from "lb", :to "gr", :qty 453})
-
-;; => ([{:from "pallet", :to "case", :qty 5} {:from "case", :to "kg", :qty 5}]
-;;     [{:from "case", :to "kg", :qty 5} {:from "pallet", :to "case", :qty 5}]
-;;     [{:from "case", :to "kg", :qty 5} {:from "kg", :to "lb", :qty 5}]
-;;     [{:from "kg", :to "lb", :qty 5} {:from "case", :to "kg", :qty 5}]
-;;     [{:from "kg", :to "lb", :qty 5} {:from "lb", :to "gr", :qty 453}]
-;;     [{:from "lb", :to "gr", :qty 453} {:from "kg", :to "lb", :qty 5}])
-
-
-;; => #{{:from "kg", :to "lb", :qty 5}
-;;      {:from "pallet", :to "case", :qty 5}
-;;      {:from "lb", :to "gr", :qty 453}
-;;      {:from "case", :to "kg", :qty 5}}
-
-
-(-> (g/graph ["pallet" "case" 25]
-             ["case" "kg" 10]
-             ["other" "gr" 5]
-             ["another" "gr" 5]
-             ["last" "kg" 5]
-             ["kg" "lb" 5]
-             ["lb" "gr" 453]
-             ["gr" "gr" 1])
-    (alg/bf-path "pallet" "gr"))
-;; => ("pallet" "case" "kg" "lb" "gr")
-
-;; => ("kg" "gr")
-(uoms)
-;; => #{["lb" 453.1 "gr"] ["kg" 1000 "gr"] ["gr" 1 "gr"]}
-
-(-> (apply g/graph (uoms))
-    (alg/bf-path "kg" "gr"))
-
-
-(defn path-from-to
-  [from to]
-  (-> (apply g/graph (uoms))
-      (alg/bf-path from to)))
-
-
-(defn uom-by-code
-  [code]
-  (d/q '[:find ?conversion-uuid
-         :where
-         [?uom :uom/code code]
-         [?conversion :conversion/from ?uom]
-         [?conversion :conversion/uuid ?conversion-uuid]] (d/db @db-core/dsdb)))
-
-(defn convert-from-to
-  [from to]
-  (let [path (path-from-to from to)]))
-
-
-;; => ("kg" "gr")
-
-
-(-> (apply g/graph #{["pallet" "case" 25]
-                     ["case" "kg" 10]
-                     ["other" "gr" 5]
-                     ["another" "gr" 5]
-                     ["last" "kg" 5]
-                     ["kg" "lb" 5]
-                     ["lb" "gr" 453]
-                     ["gr" "gr" 1]})
-    (alg/bf-path "pallet" "gr"))
-
-(-> (apply g/graph #{["lb" "gr" 453] ["kg" "gr" 1000] ["gr" "gr" 1]})
-    (alg/bf-path "kg" "gr"))
-
-
-
-(def yo (g/graph ["pallet" "case"] ["case" "lb"] ["lb" "gram"]))
-(g/nodes yo)
-(g/edges yo)
-(alg/bf-path yo "pallet" "gram")
+   Returns error map if no path is found: {:has-error? true, :error-msg 'No path was found between :case and :lbs'}"
+  [quantity from to mapping]
+  (if (= from to)
+    quantity
+    (let [graph (g/graph mapping)
+          path (alg/bf-path graph from to)
+          missing-path? (nil? path)
+          result (reduce (fn [{:keys [factor head]} cur]
+                           (let [factor (if head
+                                          (* factor (get head cur))
+                                          1)]
+                             {:factor factor
+                              :head (get mapping cur)})) {} path)
+          factor (:factor result)]
+      (if missing-path?
+        {:has-error? true
+         :error-msg (gstring/format "No path was found between %s and %s" from to)}
+        {:quantity quantity
+         :from from
+         :to to
+         :factor factor
+         :total (* quantity factor)}))))
