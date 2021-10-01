@@ -13,9 +13,9 @@
   [{:as state :keys [current-product-name]} _]
   (assoc state :item (store/item->tree current-product-name)))
 
-(defmethod reducer :update-recipe-line-item-uom
-  [{:as state :keys [current-product-name]} [_ [id uom]]]
-  (store/update-recipe-line-item-uom! id uom)
+(defmethod reducer :update-recipe-line-item-quantity-uom
+  [{:as state :keys [current-product-name]} [_ [uuid uom]]]
+  (store/update-recipe-line-item-quantity-uom! uuid uom)
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod reducer :create-recipe-line-item

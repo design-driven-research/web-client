@@ -61,9 +61,10 @@
     (let [{:company-item/keys [:uuid
                                :name
                                :sku
-                               :description
+
                                :item
-                               :quotes]} company-item
+                               :quotes]
+           :info/keys [:description]} company-item
           conversions (-> company-item :uom/conversions)
           item-temp-id (-> item :item/uuid)
 
