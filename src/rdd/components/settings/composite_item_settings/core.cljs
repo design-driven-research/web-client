@@ -18,13 +18,13 @@
 
 (defnc Core
   [{:as args
-    :keys [recipe-line-item-uuid item-yield item-yield-uom]}]
+    :keys [item-uuid item-yield item-yield-uom]}]
   (tap> {:args args})
   (let [[current-selected-index set-current-selected-index] (hooks/use-state "yield")
         [_ _ builder] (use-item-state)
-        item-yield-quantity-changed-handler (builder
-                                             :update-item-yield-quantity
-                                             :once)
+        item-yield-changed-handler (builder
+                                    :update-item-yield
+                                    :once)
 
         item-yield-uom-changed-handler (builder
                                         :update-item-yield-uom
@@ -36,11 +36,11 @@
                     :onChange #(set-current-selected-index %)}
               ($ Tab {:id "yield"
                       :title "Yield"
-                      :panel ($ ItemYieldSettings/Core {:item-yield item-yield
+                      :panel ($ ItemYieldSettings/Core {:item-uuid item-uuid
+                                                        :item-yield item-yield
                                                         :item-yield-uom item-yield-uom
-                                                        :recipe-line-item-uuid recipe-line-item-uuid
-                                                        :on-yield-quantity-changed item-yield-quantity-changed-handler
-                                                        :on-yield-uom-changed item-yield-uom-changed-handler})})
+                                                        :item-yield-changed-handler item-yield-changed-handler
+                                                        :item-yield-uom-changed-handler item-yield-uom-changed-handler})})
               ($ Tab {:id "labor"
                       :title "Labor"
                       :panel ($ ItemLaborSettings/Core)})

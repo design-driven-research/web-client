@@ -263,6 +263,25 @@
                              :uuid recipe-line-item-uuid}})
         new-db))))
 
+(defn update-item-yield!
+  [item-uuid qty]
+
+  (let [parsed-yield (js/parseFloat qty)
+        prepped-yield (if (and (number? parsed-yield)
+                               (>= parsed-yield 0))
+                        parsed-yield
+                        0)
+        has-item-uuid? item-uuid]
+
+    (when has-item-uuid?
+      (let [tx (d/transact! (conn) [[:db/add [:item/uuid item-uuid] :measurement/yield prepped-yield]])
+            new-db (:db-after tx)]
+
+        (eb/publish! {:topic :update/item
+                      :data {:yield prepped-yield
+                             :uuid item-uuid}})
+        new-db))))
+
 (defn get-item-uuid-by-eid
   [db eid]
   (->> (d/q '[:find [?uuid]

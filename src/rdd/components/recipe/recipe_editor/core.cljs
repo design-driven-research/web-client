@@ -91,7 +91,8 @@
                                                (is-settings-open-state (not is-settings-open?)))})))
 
            (when is-settings-open?
-             ($ CompositeItemSettings/Core {:item-yield (or item-yield
+             ($ CompositeItemSettings/Core {:item-uuid item-uuid
+                                            :item-yield (or item-yield
                                                             1)
                                             :item-yield-uom (or item-yield-uom
                                                                 item-default-uom)
