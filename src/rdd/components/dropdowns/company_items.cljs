@@ -10,7 +10,6 @@
 (defnc Core
   [{:keys [supplier-data]}]
 
-  (tap> supplier-data)
   (let [items (map (fn [ci] {:title (:company-item-name ci)}) supplier-data)
 
         pred-filter (hooks/use-memo :once (fn [query film index exactMatch]
@@ -25,7 +24,6 @@
                                                                        :key title
                                                                        :text title}))))]
 
-    #_(tap> items)
     (d/div {:class "flex items-center mt-2"}
            (d/span {:class "mr-2"} "Select supplier")
            ($ Select {:popoverProps (j/lit {:minimal true})

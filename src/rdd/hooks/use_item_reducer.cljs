@@ -4,37 +4,22 @@
             [rdd.services.store :as store]))
 
 (defn use-item-reducer
+  "Use the item reducer. This provides the recipe editor reducer along with a helper function 'builer' 
+   that wraps the current product name under :current-product-name
+   
+   Example usage for builder: (builder :topic-name-in-reducer [props-to-watch-and-invalidate])
+   "
   [product-name]
   (let [initial-state {:current-product-name product-name
                        :item (store/item->tree product-name)}
+
         [state dispatch!] (hooks/use-reducer rer/reducer initial-state)
-        builder (fn [topic invalidation-keys & {:keys [middleware]}]
+
+        builder (fn [topic invalidation-keys]
                   (hooks/use-callback
                    invalidation-keys
-                   (fn [& args]
-                     (let [payload (if middleware
-                                     (apply middleware args)
-                                     args)]
-                       (dispatch! [topic payload])))))]
+                   (fn [args]
+                     (dispatch! [topic args]))))]
 
-    {:state state
-     :dispatch! dispatch!
-     :builder builder}))
+    [state dispatch! builder]))
 
-;; (hooks/use-callback [product-name] (fn [recipe-line-item-id quantity]
-;;                                      (dispatch {:type :update-quantity
-;;                                                 :data {:recipe-line-item-id recipe-line-item-id
-;;                                                        :quantity quantity
-;;                                                        :product-name product-name}})))
-
-
-;; (let [dispatch (hooks/use-callback
-;;                 invalidation-keys
-;;                 (fn [& args]
-;;                   (let [data (if middleware
-;;                                (apply middleware args)
-;;                                args)
-;;                         payload {:topic topic
-;;                                  :data data}]
-;;                     (publish! payload))))]
-;;   dispatch)

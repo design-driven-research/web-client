@@ -1,7 +1,7 @@
 (ns rdd.core
   (:require [helix.core :refer [$ defnc]]
             [mount.core :as mount]
-            [rdd.components.nav-bar.main :refer [nav-bar]]
+            [rdd.components.nav-bars.main :refer [nav-bar]]
 
             [rdd.db]
             [rdd.services.syncer]
@@ -9,14 +9,16 @@
             [rdd.subscriptions]
             [rdd.services.store]
             [rdd.views.edit-recipe :as erv]
+            [rdd.providers.item-provider :refer [ItemProvider]]
             ["react-dom" :as rdom]
             ["@blueprintjs/core" :refer [HotkeysProvider]]))
 
 (defnc app []
   (let [product-name "Wrap"]
-    ($ HotkeysProvider ($ :div
-                          ($ nav-bar)
-                          ($ erv/view {:product-name product-name})))))
+    ($ ItemProvider
+       ($ HotkeysProvider ($ :div
+                             ($ nav-bar)
+                             ($ erv/view {:product-name product-name}))))))
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))
 

@@ -38,7 +38,8 @@
                   (d/div {:class "mr-2"}
                          ($ InputGroup {:value recipe-line-item-quantity
                                         :small true
-                                        :onChange #(update-recipe-line-item-quantity-handler recipe-line-item-uuid (.. % -target -value))}))
+                                        :onChange #(update-recipe-line-item-quantity-handler {:uuid recipe-line-item-uuid
+                                                                                              :quantity (.. % -target -value)})}))
 
 
                   ($ Select {:popoverProps (j/lit {:minimal true})

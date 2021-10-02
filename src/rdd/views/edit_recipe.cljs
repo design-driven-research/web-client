@@ -1,14 +1,17 @@
 (ns rdd.views.edit-recipe
   (:require ["@blueprintjs/core" :as hey :refer [useHotkeys]]
-            [helix.core :refer [$ defnc]]
+            ["react" :as react]
+            [helix.core :refer [$ defnc provider]]
             [helix.hooks :as hooks]
             [rdd.components.recipe.recipe-editor.core :as recipe-editor]
+            [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.hooks.use-item-reducer :refer [use-item-reducer]]
             [rdd.services.event-bus :refer [subscribe!]]))
 
+
 (defnc view
   [{:keys [product-name]}]
-  (let [{:keys [state dispatch! builder]} (use-item-reducer product-name)
+  (let [[state dispatch! builder] (use-item-state)
         item (-> state :item)
 
         hotkeys (hooks/use-memo :once (clj->js [{:combo "Shift + B"
