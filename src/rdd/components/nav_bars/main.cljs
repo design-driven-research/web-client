@@ -10,6 +10,6 @@
   []
   (let [[state dispatch!] (use-item-state)]
     (d/div {:class "mb-4 flex justify-end"}
-           (d/span (str "Name: " (:current-product-name state)))
-           ($ Button {:icon "download"
-                      :onClick (fn [] (store/item->tree "Sauce"))} "Download recipe"))))
+
+           #_($ Button {:icon "download"
+                        :onClick (fn [] (store/item->tree "Sauce"))} "Download recipe"))))

@@ -25,13 +25,13 @@
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod reducer :update-item-yield
-  [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid yield]}]]
-  (store/update-item-yield! uuid yield)
+  [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid quantity]}]]
+  (store/update-item-yield! uuid quantity)
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod reducer :update-item-yield-uom
   [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid uom]}]]
-  (store/update-item-yield! uuid uom)
+  (store/update-item-yield-uom! uuid uom)
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod reducer :create-recipe-line-item

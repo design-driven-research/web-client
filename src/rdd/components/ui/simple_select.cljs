@@ -6,9 +6,16 @@
             [helix.hooks :as hooks]))
 
 (defnc SimpleSelect
-  [{:keys [on-selected
+  "A simple select expects the following props
+   value - A scalar
+   options - A vector of maps. Each map must include a :title key
+   on-selected - Handler called on click or enter of new option
+
+   Example ($ SimpleSelect {:value 'gr' :options [{:title 'gr'} {:title 'lb'}] :on-selected on-selected-handler})
+   "
+  [{:keys [value
            options
-           value]}]
+           on-selected]}]
 
   (let [on-selected-wrapper (fn [val] (on-selected (js->clj val :keywordize-keys true)))
         renderer (hooks/use-memo :once (fn [item opts]

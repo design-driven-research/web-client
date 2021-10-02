@@ -69,7 +69,7 @@
           item-temp-id (-> item :item/uuid)
 
           company-quotes-temp-ids (map :quote/uuid quotes)
-          conversion-temp-ids (pm/spy>> :c (map :conversion/uuid conversions))]
+          conversion-temp-ids (map :conversion/uuid conversions)]
       {:db/id uuid
        :company-item/uuid uuid
        :company-item/name name

@@ -3,7 +3,7 @@
             ["react" :as react]
             [helix.core :refer [$ defnc provider]]
             [helix.hooks :as hooks]
-            [rdd.components.recipe.recipe-editor.core :as recipe-editor]
+            [rdd.components.items.item-editor :as recipe-editor]
             [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.hooks.use-item-reducer :refer [use-item-reducer]]
             [rdd.services.event-bus :refer [subscribe!]]))

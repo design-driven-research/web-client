@@ -1,13 +1,9 @@
 (ns rdd.components.forms.item-yield-settings
-  (:require ["@blueprintjs/core" :refer [InputGroup]]
-            [helix.core :refer [$ defnc]]
+  (:require [helix.core :refer [$ defnc]]
             [helix.dom :as d]
-            [rdd.components.recipe.recipe-editor.rows.atomic-item.core]
-            [rdd.components.recipe.recipe-editor.rows.composite-item.tool-bar]
-            [rdd.components.ui.simple-select :refer [SimpleSelect]]
-            [rdd.converters.uom]))
+            [rdd.components.ui.quantity-editor :refer [QuantityEditor]]))
 
-(defnc Core
+(defnc ItemYieldSettings
   [{:keys [item-uuid
            item-yield
            item-yield-uom
@@ -15,18 +11,16 @@
            item-yield-uom-changed-handler]}]
 
   (d/div {:class "item-quantity flex items-center"}
-         (d/div {:class "flex items-center"}
-                (d/span {:class "mr-4"} "Qty")
-                ($ InputGroup {:value item-yield
-                               :small true
-                               :onChange #(item-yield-changed-handler {:uuid item-uuid
-                                                                       :yield (.. % -target -value)})})
-
-                ($ SimpleSelect {:value item-yield-uom
-                                 :on-selected #(item-yield-uom-changed-handler {:uuid item-uuid
-                                                                                :uom (:title %)})
-                                 :options [{:title "gr"}
-                                           {:title "lb"}]}))))
+         ($ QuantityEditor {:label "Yield"
+                            :uuid item-uuid
+                            :qty item-yield
+                            :uom-code item-yield-uom
+                            :options [{:title "gr"
+                                       :uom-code "gr"}
+                                      {:title "lb"
+                                       :uom-code "lb"}]
+                            :on-quantity-changed item-yield-changed-handler
+                            :on-uom-changed item-yield-uom-changed-handler})))
 
 
 

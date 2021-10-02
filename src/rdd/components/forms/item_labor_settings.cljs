@@ -3,8 +3,7 @@
             ["@blueprintjs/select" :refer [Select]]
 
             [applied-science.js-interop :as j]
-            [rdd.components.recipe.recipe-editor.rows.atomic-item.core]
-            [rdd.components.recipe.recipe-editor.rows.composite-item.tool-bar]
+
             [helix.core :refer [$ defnc]]
             [rdd.converters.uom]
             [helix.dom :as d]

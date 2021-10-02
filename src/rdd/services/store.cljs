@@ -8,11 +8,11 @@
             [rdd.converters.uom :as uom-converters]
             [rdd.db :as db-core]))
 
-(defn conn
+(defn- conn
   []
   @db-core/dsdb)
 
-(defn db
+(defn- db
   []
   (d/db (conn)))
 
@@ -27,6 +27,22 @@
          :where
          [?eid :item/uuid ?uuid]
          [?eid :item/production-type :production.type/ATOM]] (db)))
+
+(defn get-items
+  "Get all items"
+  []
+  (d/q '[:find (pull ?eid [*])
+         :where
+         [?eid :item/uuid ?uuid]] (db)))
+
+(defn get-recipe-line-items
+  "Get all recipe line items"
+  []
+  (d/q '[:find (pull ?eid [*])
+         :where
+         [?eid :recipe-line-item/uuid ?uuid]] (db)))
+
+(get-recipe-line-items)
 
 (defn get-standard-conversions
   "Get standard conversions for weight volume, for both metric and imperial"
@@ -253,14 +269,14 @@
                            0)
         has-recipe-line-item-uuid? recipe-line-item-uuid]
 
-    (tap> [:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity])
+
     (when has-recipe-line-item-uuid?
-      (let [tx (d/transact! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
+      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
             new-db (:db-after tx)]
 
-        (eb/publish! {:topic :update/recipe-line-item
-                      :data {:quantity prepped-quantity
-                             :uuid recipe-line-item-uuid}})
+        #_(eb/publish! {:topic :update/recipe-line-item
+                        :data {:quantity prepped-quantity
+                               :uuid recipe-line-item-uuid}})
         new-db))))
 
 (defn update-item-yield!
@@ -274,7 +290,7 @@
         has-item-uuid? item-uuid]
 
     (when has-item-uuid?
-      (let [tx (d/transact! (conn) [[:db/add [:item/uuid item-uuid] :measurement/yield prepped-yield]])
+      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:item/uuid item-uuid] :measurement/yield prepped-yield]])
             new-db (:db-after tx)]
 
         (eb/publish! {:topic :update/item
@@ -298,26 +314,32 @@
             db eid)
        first))
 
+(defn update-item-yield-uom!
+  [item-uuid uom-code]
+  (let [has-item-uuid? item-uuid]
+    (when has-item-uuid?
+
+      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:item/uuid item-uuid] :measurement/uom [:uom/code uom-code]]])
+            new-db (:db-after tx)]
+        new-db))))
+
 (defn update-recipe-line-item-quantity-uom!
   [recipe-line-item-uuid uom-code]
   (let [has-recipe-line-item-uuid? recipe-line-item-uuid]
     (when has-recipe-line-item-uuid?
 
-      (let [tx (d/transact! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/uom [:uom/code uom-code]]])
+      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/uom [:uom/code uom-code]]])
             new-db (:db-after tx)]
 
-        (eb/publish! {:topic :update/recipe-line-item
-                      :data {:uom uom-code
-                             :uuid recipe-line-item-uuid}})
         new-db))))
 
 (defn create-recipe-line-item!
   [parent-item-id child-item-id]
   (let [new-uuid (nano-id)]
-    (d/transact! (conn) [[:db/add -1 :recipe-line-item/uuid  new-uuid]
-                         [:db/add -1 :composite/contains child-item-id]
-                         [:db/add -1 :measurement/quantity 0]
-                         [:db/add parent-item-id :composite/contains -1]])))
+    (db-core/transact-from-local! (conn) [[:db/add -1 :recipe-line-item/uuid  new-uuid]
+                                          [:db/add -1 :composite/contains child-item-id]
+                                          [:db/add -1 :measurement/quantity 0]
+                                          [:db/add parent-item-id :composite/contains -1]])))
 
 (comment
   (item-quantity-in-uom "AMRGozwKdaHB3UAustIja" 1 "gr" "gr")
