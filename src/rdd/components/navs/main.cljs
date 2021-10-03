@@ -1,4 +1,4 @@
-(ns rdd.components.nav-bars.main
+(ns rdd.components.navs.main
   (:require
    ["@blueprintjs/core" :refer [Button]]
    [helix.core :refer [$ defnc]]
@@ -6,7 +6,7 @@
    [rdd.providers.item-provider :refer [use-item-state]]
    [rdd.services.store :as store]))
 
-(defnc nav-bar
+(defnc NavBar
   []
   (let [[state dispatch!] (use-item-state)]
     (d/div {:class "mb-4 flex justify-end"}

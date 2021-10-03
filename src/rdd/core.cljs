@@ -1,7 +1,7 @@
 (ns rdd.core
   (:require [helix.core :refer [$ defnc]]
             [mount.core :as mount]
-            [rdd.components.nav-bars.main :refer [nav-bar]]
+            [rdd.components.navs.main :refer [NavBar]]
 
             [rdd.db]
             [rdd.services.syncer]
@@ -17,7 +17,7 @@
   (let [product-name "Wrap"]
     ($ ItemProvider
        ($ HotkeysProvider ($ :div
-                             ($ nav-bar)
+                             ($ NavBar)
                              ($ erv/view {:product-name product-name}))))))
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))

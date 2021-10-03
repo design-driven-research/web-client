@@ -1,5 +1,6 @@
 (ns rdd.components.items.item-editor
-  (:require ["@blueprintjs/core" :refer [Button]]
+  (:require ["@blueprintjs/core" :refer [Button Menu MenuItem]]
+            ["@blueprintjs/popover2" :refer [Popover2]]
             [helix.core :refer [$ defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
@@ -46,6 +47,7 @@
 
   (let [[is-settings-open? is-settings-open-state] (hooks/use-state false)
         [is-showing-children? set-is-showing-children-state] (hooks/use-state true)
+        [is-hovering? set-is-hovering] (hooks/use-state false)
 
         has-children? (seq children)
 
@@ -54,35 +56,54 @@
         update-recipe-line-item-quantity-handler (builder :update-recipe-line-item-quantity :once)]
 
     (d/div {:class "item-wrapper flex flex-col"}
-           (d/div {:class "item-header-wrapper flex w-full mt-2 border "}
-                  (when has-children?
-                    (d/div {:class "border-r p-2 cursor-pointer"
-                            :onClick (fn []
-                                       (set-is-showing-children-state (not is-showing-children?)))}
-                           (if is-showing-children?
-                             ($ Button {:icon "chevron-down"
-                                        :minimal true})
+           (d/div {:class "item-header-wrapper flex w-full mt-2"
+                   :onMouseEnter (fn [e]
+                                   (.stopPropagation e)
+                                   (set-is-hovering true))
+                   :onMouseLeave (fn [e]
+                                   (.stopPropagation e)
+                                   (set-is-hovering false))}
+                  (d/div {:class "hover-menu flex flex-col align-center justify-center items-center w-8 h-full"}
+                         (when true
+                           (d/div {:class ""}
 
-                             ($ Button {:icon "chevron-right"
-                                        :minimal true}))))
-                  (d/div {:class "flex items-center justify-between w-full p-2"}
-                         (d/div {:class "flex w-1/2 items-center"}
-                                ($ :span {:class "w-6/12"} (str item-name)))
-                         ($ QuantityEditor {:label "Qty"
-                                            :uuid recipe-line-item-uuid
-                                            :qty recipe-line-item-quantity
-                                            :uom-code recipe-line-item-quantity-uom
-                                            :options [{:title "gr"
-                                                       :uom-code "gr"}
-                                                      {:title "lb"
-                                                       :uom-code "lb"}]
-                                            :on-quantity-changed update-recipe-line-item-quantity-handler
-                                            :on-uom-changed recipe-line-item-quantity-uom-selected-handler})
 
-                         ($ Button {:icon "cog"
-                                    :minimal true
-                                    :onClick (fn []
-                                               (is-settings-open-state (not is-settings-open?)))})))
+                                  ($ Popover2 {:placement "right-end"
+                                               :content ($ Menu
+                                                           ($ MenuItem {:icon "graph"
+                                                                        :text "Graph"}))}
+
+                                     ($ Button {:outlined false}
+                                        "+")))))
+                  (d/div {:class "flex w-full border"}
+                         (when has-children?
+                           (d/div {:class "border-r p-2 cursor-pointer"
+                                   :onClick (fn []
+                                              (set-is-showing-children-state (not is-showing-children?)))}
+                                  (if is-showing-children?
+                                    ($ Button {:icon "chevron-down"
+                                               :minimal true})
+
+                                    ($ Button {:icon "chevron-right"
+                                               :minimal true}))))
+                         (d/div {:class "flex items-center justify-between w-full p-2"}
+                                (d/div {:class "flex w-1/2 items-center"}
+                                       ($ :span {:class "w-6/12"} (str item-name item-uuid)))
+                                ($ QuantityEditor {:label "Qty"
+                                                   :uuid recipe-line-item-uuid
+                                                   :qty recipe-line-item-quantity
+                                                   :uom-code recipe-line-item-quantity-uom
+                                                   :options [{:title "gr"
+                                                              :uom-code "gr"}
+                                                             {:title "lb"
+                                                              :uom-code "lb"}]
+                                                   :on-quantity-changed update-recipe-line-item-quantity-handler
+                                                   :on-uom-changed recipe-line-item-quantity-uom-selected-handler})
+
+                                ($ Button {:icon "cog"
+                                           :minimal true
+                                           :onClick (fn []
+                                                      (is-settings-open-state (not is-settings-open?)))}))))
 
            (when is-settings-open?
              (let [production-type (:item-production-type item)]
