@@ -1,9 +1,9 @@
 (ns rdd.components.items.item-editor
-  (:require ["@blueprintjs/core" :refer [Button Menu MenuItem]]
-            ["@blueprintjs/popover2" :refer [Popover2]]
+  (:require ["@blueprintjs/core" :refer [Button]]
             [helix.core :refer [$ defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
+            [rdd.components.menus.add-row-menu :refer [AddRowMenu]]
             [rdd.components.settings.atomic-item-settings :refer [AtomicItemSettings]]
             [rdd.components.settings.composite-item-settings :refer [CompositeItemSettings]]
             [rdd.components.ui.quantity-editor :refer [QuantityEditor]]
@@ -41,6 +41,7 @@
             item-yield
             item-default-uom
             recipe-line-item-uuid
+            recipe-line-item-position
             item-yield-uom
             recipe-line-item-quantity-uom
             children]} :item}]
@@ -53,7 +54,16 @@
 
         [_ _ builder] (use-item-state)
         recipe-line-item-quantity-uom-selected-handler (builder :update-recipe-line-item-quantity-uom :once)
-        update-recipe-line-item-quantity-handler (builder :update-recipe-line-item-quantity :once)]
+        update-recipe-line-item-quantity-handler (builder :update-recipe-line-item-quantity :once)
+
+
+        create-sibling-recipe-line-item (builder :create-sibling-recipe-line-item :once)
+        create-nested-recipe-line-item (builder :create-nested-recipe-line-item :once)
+
+        on-add-row-below (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-sibling-recipe-line-item {:origin-rli-uuid recipe-line-item-uuid
+                                                                                                                    :insert-type :after}))
+        on-add-row-inside (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-nested-recipe-line-item {:origin-rli-uuid recipe-line-item-uuid
+                                                                                                                    :insert-type :inside}))]
 
     (d/div {:class "item-wrapper flex flex-col"}
            (d/div {:class "item-header-wrapper flex w-full mt-2"
@@ -63,18 +73,10 @@
                    :onMouseLeave (fn [e]
                                    (.stopPropagation e)
                                    (set-is-hovering false))}
-                  (d/div {:class "hover-menu flex flex-col align-center justify-center items-center w-8 h-full"}
-                         (when true
-                           (d/div {:class ""}
-
-
-                                  ($ Popover2 {:placement "right-end"
-                                               :content ($ Menu
-                                                           ($ MenuItem {:icon "graph"
-                                                                        :text "Graph"}))}
-
-                                     ($ Button {:outlined false}
-                                        "+")))))
+                  (d/div {:class "hover-menu flex flex-col align-center justify-center items-center w-8 mr-2 h-full"}
+                         (when is-hovering?
+                           ($ AddRowMenu {:on-add-row-below on-add-row-below
+                                          :on-add-row-inside on-add-row-inside})))
                   (d/div {:class "flex w-full border"}
                          (when has-children?
                            (d/div {:class "border-r p-2 cursor-pointer"
@@ -88,7 +90,7 @@
                                                :minimal true}))))
                          (d/div {:class "flex items-center justify-between w-full p-2"}
                                 (d/div {:class "flex w-1/2 items-center"}
-                                       ($ :span {:class "w-6/12"} (str item-name item-uuid)))
+                                       ($ :span {:class "w-6/12"} (str item-name #_item-uuid #_recipe-line-item-position)))
                                 ($ QuantityEditor {:label "Qty"
                                                    :uuid recipe-line-item-uuid
                                                    :qty recipe-line-item-quantity
@@ -128,6 +130,7 @@
 
                                                                       :recipe-line-item-quantity-uom recipe-line-item-quantity-uom})
                  :else (d/div "No matching production type found"))))
+
            (when (and has-children?
                       is-showing-children?)
              ($ :div

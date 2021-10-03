@@ -1,7 +1,7 @@
 (ns rdd.core
   (:require [helix.core :refer [$ defnc]]
             [mount.core :as mount]
-            [rdd.components.navs.main :refer [NavBar]]
+            [rdd.components.menus.header :refer [NavBar]]
 
             [rdd.db]
             [rdd.services.syncer]
@@ -11,7 +11,9 @@
             [rdd.views.edit-recipe :as erv]
             [rdd.providers.item-provider :refer [ItemProvider]]
             ["react-dom" :as rdom]
-            ["@blueprintjs/core" :refer [HotkeysProvider]]))
+            ["@blueprintjs/core" :refer [HotkeysProvider FocusStyleManager]]))
+
+(.onlyShowFocusOnTabs FocusStyleManager)
 
 (defnc app []
   (let [product-name "Wrap"]

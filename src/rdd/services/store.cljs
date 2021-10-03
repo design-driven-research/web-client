@@ -209,17 +209,23 @@
                         :children children}))
 
         build-recipe-line-item (fn [recipe-line-item]
-                                 (let [item (item->tree' (first (:composite/contains recipe-line-item)))
+                                 (let [children (:composite/contains recipe-line-item)
+                                       has-children? (seq children)
+                                       item (when has-children?
+                                              (item->tree' (first (:composite/contains recipe-line-item))))
+                                       has-item? (boolean item)
                                        item-uuid (:item-uuid item)
                                        recipe-line-item-uuid (:recipe-line-item/uuid recipe-line-item)
                                        recipe-line-item-quantity (:measurement/quantity recipe-line-item)
                                        recipe-line-item-quantity-uom (-> recipe-line-item :measurement/uom :uom/code)
+                                       recipe-line-item-position (-> recipe-line-item :meta/position)
 
                                       ;;  Should we instead check for if this is composite or atom type item?
                                       ;;  Need to simplify this
-                                       child-uom->rli-uom-conversion (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom (or (:item-yield-uom item)
-                                                                                                                                                                         (:item-default-uom item))))
-                                       converted-composite-item-cost (* (:item-cost-per-default-uom item) child-uom->rli-uom-conversion)
+                                       child-uom->rli-uom-conversion (when has-item?
+                                                                       (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom (or (:item-yield-uom item)
+                                                                                                                                                                           (:item-default-uom item)))))
+                                       converted-composite-item-cost (when has-item? (* (:item-cost-per-default-uom item) child-uom->rli-uom-conversion))
 
                                        recipe-line-item-total-cost (or
                                                                     converted-composite-item-cost
@@ -228,7 +234,8 @@
                                    (merge item {:recipe-line-item-uuid recipe-line-item-uuid
                                                 :recipe-line-item-quantity recipe-line-item-quantity
                                                 :recipe-line-item-total-cost recipe-line-item-total-cost
-                                                :recipe-line-item-quantity-uom recipe-line-item-quantity-uom})))
+                                                :recipe-line-item-quantity-uom recipe-line-item-quantity-uom
+                                                :recipe-line-item-position recipe-line-item-position})))
 
         build-base-item (fn [item]
                           (let [item-uuid (:item/uuid item)
@@ -333,13 +340,135 @@
 
         new-db))))
 
-(defn create-recipe-line-item!
-  [parent-item-id child-item-id]
-  (let [new-uuid (nano-id)]
+(defn get-rli-parent-item
+  [db rli-uuid]
+  (->> (d/q '[:find [?item-uuid]
+              :in $ ?rli-uuid
+              :where [?eid :recipe-line-item/uuid ?rli-uuid]
+              [?item :composite/contains ?eid]
+              [?item :item/uuid ?item-uuid]]
+            db rli-uuid)
+       first))
+
+(defn get-rli-position
+  [db rli-uuid]
+  (->> (d/q '[:find [?position]
+              :in $ ?rli-uuid
+              :where [?rli :recipe-line-item/uuid ?rli-uuid]
+              [?rli :meta/position ?position]]
+            db rli-uuid)
+       first))
+
+{:above 0
+ :this 100
+ :below 1000}
+
+(defn get-rli-siblings
+  [db rli-uuid]
+  (let [positions (->> (d/q '[:find ?sibling-uuid ?position
+                              :keys uuid position
+                              :in $ ?rli-uuid
+                              :where [?rli :recipe-line-item/uuid ?rli-uuid]
+                              [?parent-item :composite/contains ?rli]
+                              [?parent-item :composite/contains ?siblings]
+                              [?siblings :recipe-line-item/uuid ?sibling-uuid]
+                              [?siblings :meta/position ?position]]
+                            db rli-uuid)
+                       (sort :position))]
+    positions))
+
+(defn center-between-int
+  "Returns the center point between two numbers
+   Will return a long
+   Example: (center-between-int 0 100) => 50
+   "
+  [a b]
+  (let [high (max a b)
+        low (min a b)
+        diff (- high low)
+        half-diff (/ diff 2)]
+    (long (+ low half-diff))))
+
+(defn position-info
+  [rli-uuid positions]
+  (let [current-rli (first (filter #(= (:uuid %) rli-uuid) positions))
+        current-rli-index (.indexOf positions current-rli)
+        is-first? (= 0 current-rli-index)
+        is-last? (= current-rli-index (count positions))
+        previous-rli (if is-first?
+                       nil
+                       (nth positions (dec current-rli-index)))
+        next-rli (if is-last?
+                   nil
+                   (nth positions (inc current-rli-index)))
+
+        current-position (:position current-rli)
+        previous-rli-position (or (:position previous-rli)
+                                  0)
+
+        next-rli-position (or (:position next-rli)
+                              9007199254740991)]
+    {:previous-rli-position previous-rli-position
+     :current-position current-position
+     :next-rli-position next-rli-position
+
+     :current-rli current-rli
+     :current-rli-index current-rli-index
+     :previous-rli previous-rli
+     :next-rli next-rli
+     :next-position-before (center-between-int current-position previous-rli-position)
+     :next-position-after (center-between-int current-position next-rli-position)}))
+
+
+(defn create-sibling-recipe-line-item!
+  [origin-rli-uuid insert-type]
+  (let [new-uuid (nano-id)
+        parent-item-uuid (get-rli-parent-item (db) origin-rli-uuid)
+        rli-siblings (get-rli-siblings (db) origin-rli-uuid)
+        position-info (position-info origin-rli-uuid rli-siblings)
+        next-position (case insert-type
+                        :before (:next-position-before position-info)
+                        :after (:next-position-after position-info))]
+
     (db-core/transact-from-local! (conn) [[:db/add -1 :recipe-line-item/uuid  new-uuid]
-                                          [:db/add -1 :composite/contains child-item-id]
-                                          [:db/add -1 :measurement/quantity 0]
-                                          [:db/add parent-item-id :composite/contains -1]])))
+                                          [:db/add -1 :meta/position next-position]
+                                          [:db/add [:item/uuid parent-item-uuid] :composite/contains -1]])))
+
+
+#_(create-sibling-recipe-line-item! "codEbLriTCD6ioWqhFrpQ" :before)
+;; => 1930114126015926
+
+;; => [{:next-position-after 3216856876693210,
+;;      :previous-rli-position 1286742750677284,
+;;      :previous-rli {:uuid "kihNiJU-QDwjHpfovhO4w", :position 1286742750677284},
+;;      :next-position-before 1930114126015926,
+;;      :next-rli-position 3860228252031853,
+;;      :current-rli {:uuid "codEbLriTCD6ioWqhFrpQ", :position 2573485501354568},
+;;      :current-rli-index 1,
+;;      :current-position 2573485501354568,
+;;      :next-rli {:uuid "dyTVkCHPNzyng5gEm6TL3", :position 3860228252031853}}]
+
+;; => :repl/exception!
+
+;; => ["y79vjHv-V7pn_IGkBgT8C"
+;;     "VjmkJLqzfXABejLZ62HUV"
+;;     ({:uuid "kihNiJU-QDwjHpfovhO4w", :position 1286742750677284}
+;;      {:uuid "codEbLriTCD6ioWqhFrpQ", :position 2573485501354568}
+;;      {:uuid "dyTVkCHPNzyng5gEm6TL3", :position 3860228252031853}
+;;      {:uuid "jic95rtCQKj_73VYj-ymP", :position 5146971002709137}
+;;      {:uuid "ehCJLt_lOF6E58AIeLcFe", :position 6433713753386422}
+;;      {:uuid "6jN1WqOi547wHv6NAWtw4", :position 7720456504063706})
+;;     {:next-position-after 3216856876693210,
+;;      :previous-rli-position 1286742750677284,
+;;      :previous-rli {:uuid "kihNiJU-QDwjHpfovhO4w", :position 1286742750677284},
+;;      :next-position-before 1930114126015926,
+;;      :next-rli-position 3860228252031853,
+;;      :current-rli {:uuid "codEbLriTCD6ioWqhFrpQ", :position 2573485501354568},
+;;      :current-rli-index 1,
+;;      :current-position 2573485501354568,
+;;      :next-rli {:uuid "dyTVkCHPNzyng5gEm6TL3", :position 3860228252031853}}
+;;     nil]
+
 
 (comment
   (item-quantity-in-uom "AMRGozwKdaHB3UAustIja" 1 "gr" "gr")

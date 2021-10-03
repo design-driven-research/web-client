@@ -34,7 +34,14 @@
   (store/update-item-yield-uom! uuid uom)
   (assoc state :item (store/item->tree current-product-name)))
 
-(defmethod reducer :create-recipe-line-item
-  [{:as state :keys [current-product-name]} [_ [parent-item-id new-item-id]]]
-  (store/create-recipe-line-item! parent-item-id new-item-id)
+(defmethod reducer :create-sibling-recipe-line-item
+  [{:as state :keys [current-product-name]} [_ {:as args :keys [origin-rli-uuid insert-type]}]]
+  (store/create-sibling-recipe-line-item! origin-rli-uuid insert-type)
   (assoc state :item (store/item->tree current-product-name)))
+
+(defmethod reducer :create-nested-recipe-line-item
+  [{:as state :keys [current-product-name]} [_ {:as args :keys [origin-rli-uuid insert-type]}]]
+
+  #_(store/create-recipe-line-item! origin-rli-uuid insert-type)
+  state
+  #_(assoc state :item (store/item->tree current-product-name)))

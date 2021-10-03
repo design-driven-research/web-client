@@ -1,4 +1,4 @@
-(ns rdd.components.navs.main
+(ns rdd.components.menus.header
   (:require
    ["@blueprintjs/core" :refer [Button]]
    [helix.core :refer [$ defnc]]
