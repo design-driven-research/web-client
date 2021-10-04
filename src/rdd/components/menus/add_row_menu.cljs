@@ -7,7 +7,7 @@
 (defnc AddRowMenu
   [{:keys [on-add-row-below
            on-add-row-inside]}]
-  (d/div {:class ""}
+  (d/div {:class "h-full"}
          ($ Popover2 {:placement "bottom-start"
                       :content (d/div {:class "border"}
                                       ($ Menu

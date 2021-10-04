@@ -10,47 +10,109 @@
             [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.utils.for-indexed :refer [for-indexed]]))
 
-(declare Item Children)
+(declare RecipeLineItemWrapper)
 
 (defnc Editor
   "The main entry point for a recipe."
-  [{:keys [item
-           update-recipe-line-item-quantity-uom-handler
-           create-recipe-line-item]
-    {:keys [children item-total-cost]} :item}]
+  [{:keys [item]
+    {:item/keys [children total-cost]} :item}]
 
-  (let [has-children? (seq children)]
+  (let [has-children? (seq children)
+        sorted-children (sort-by :recipe-line-item/position children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
            (d/h1 (:item-name item))
-           (d/p {:class "text-lg"} "Total cost: $" (js/parseInt item-total-cost))
+           (d/p {:class "text-lg"} "Total cost: $" (js/parseInt total-cost))
 
            (when has-children?
-             ($ rdd.components.items.item-editor/Children {:item item
-                                                           :update-recipe-line-item-quantity-uom-handler update-recipe-line-item-quantity-uom-handler
-                                                           :create-recipe-line-item create-recipe-line-item})))))
+             (for-indexed [rli index sorted-children]
+                          ($ RecipeLineItemWrapper {:key (:recipe-line-item/uuid rli)
+                                                    :rli rli
+                                                    :index index}))))))
 
-(defnc Item
+(defnc DraftRecipeLineItem
+  [{:keys [rli]}]
+  (d/div {:class "flex border w-full h-12 items-center"}
+         (d/span {:class "ml-2"} (str "Draft" " - " (-> rli :recipe-line-item/position)))))
+
+(defnc PublishedRecipeLineItem
+  [{:keys [rli
+           has-children?
+           is-showing-children?
+           set-is-showing-children-state
+           update-recipe-line-item-quantity-handler
+           recipe-line-item-quantity-uom-selected-handler
+           is-settings-open-state
+           is-settings-open?]}]
+  (d/div {:class "flex flex-col w-full border"}
+         (d/div {:class "flex"} (when has-children?
+                                  (d/div {:class "border-r p-2 cursor-pointer"
+                                          :onClick (fn []
+                                                     (set-is-showing-children-state (not is-showing-children?)))}
+                                         (if is-showing-children?
+                                           ($ Button {:icon "chevron-down"
+                                                      :minimal true})
+                                           ($ Button {:icon "chevron-right"
+                                                      :minimal true}))))
+                (d/div {:class "flex items-center justify-between w-full p-2"}
+                       (d/div {:class "flex w-1/2 items-center"}
+                              ($ :span {:class "w-6/12"} (str (-> rli :recipe-line-item/child-item :item/name)
+                                                              " - "
+                                                              (-> rli :recipe-line-item/position)
+                                                              " - rli-uuid - "
+                                                              (-> rli :recipe-line-item/uuid))))
+                       ($ QuantityEditor {:label "Qty"
+                                          :uuid (:recipe-line-item/uuid rli)
+                                          :qty (:recipe-line-item/quantity rli)
+                                          :uom-code (:recipe-line-item/uom rli)
+                                          :options [{:title "gr"
+                                                     :uom-code "gr"}
+                                                    {:title "lb"
+                                                     :uom-code "lb"}]
+                                          :on-quantity-changed update-recipe-line-item-quantity-handler
+                                          :on-uom-changed recipe-line-item-quantity-uom-selected-handler})
+
+                       ($ Button {:icon "cog"
+                                  :minimal true
+                                  :onClick (fn []
+                                             (is-settings-open-state (not is-settings-open?)))})))
+         (when is-settings-open?
+           (let [production-type (-> rli :recipe-line-item/child-item :item/production-type)]
+             (case production-type
+               :production.type/ATOM ($ AtomicItemSettings {:item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
+
+                                                            :item-yield-uom (or (-> rli :recipe-line-item/child-item :item/yield)
+                                                                                (-> rli :recipe-line-item/child-item :item/uom))
+
+                                                            :recipe-line-item-uuid (:recipe-line-item/uuid rli)
+                                                            :recipe-line-item-quantity (:recipe-line-item/quantity rli)
+
+                                                            :recipe-line-item-quantity-uom (:recipe-line-item/quantity rli)})
+               :production.type/COMPOSITE ($ CompositeItemSettings {:item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
+                                                                    :item-yield (or (-> rli :recipe-line-item/child-item :item/yield)
+                                                                                    1)
+                                                                    :item-yield-uom (or (-> rli :recipe-line-item/child-item :item/yield-uom)
+                                                                                        (-> rli :recipe-line-item/child-item :item/default-uom))
+
+                                                                    :recipe-line-item-uuid (:recipe-line-item/uuid rli)
+                                                                    :recipe-line-item-quantity (:recipe-line-item/quantity rli)
+
+                                                                    :recipe-line-item-quantity-uom (:recipe-line-item/uom rli)})
+               :else (d/div "No matching production type found"))))))
+
+(defnc RecipeLineItemWrapper
   "Item row"
-  [{:keys [item
-           update-recipe-line-item-quantity-uom-handler
-           create-recipe-line-item]
+  [{:keys [rli]}]
 
-    {:keys [item-uuid
-            item-name
-            recipe-line-item-quantity
-            item-yield
-            item-default-uom
-            recipe-line-item-uuid
-            recipe-line-item-position
-            item-yield-uom
-            recipe-line-item-quantity-uom
-            children]} :item}]
+  (let [child-item (-> rli :recipe-line-item/child-item)
+        is-draft? (nil? child-item)
 
-  (let [[is-settings-open? is-settings-open-state] (hooks/use-state false)
+        [is-settings-open? is-settings-open-state] (hooks/use-state false)
         [is-showing-children? set-is-showing-children-state] (hooks/use-state true)
         [is-hovering? set-is-hovering] (hooks/use-state false)
 
-        has-children? (seq children)
+        item-children (-> rli :recipe-line-item/child-item :item/children)
+        has-children? (seq item-children)
+        sorted-children (sort-by :recipe-line-item/position item-children)
 
         [_ _ builder] (use-item-state)
         recipe-line-item-quantity-uom-selected-handler (builder :update-recipe-line-item-quantity-uom :once)
@@ -60,101 +122,41 @@
         create-sibling-recipe-line-item (builder :create-sibling-recipe-line-item :once)
         create-nested-recipe-line-item (builder :create-nested-recipe-line-item :once)
 
-        on-add-row-below (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-sibling-recipe-line-item {:origin-rli-uuid recipe-line-item-uuid
+        on-add-row-below (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-sibling-recipe-line-item {:origin-rli-uuid (:recipe-line-item/uuid rli)
                                                                                                                     :insert-type :after}))
-        on-add-row-inside (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-nested-recipe-line-item {:origin-rli-uuid recipe-line-item-uuid
+        on-add-row-inside (hooks/use-callback [:item-uuid :recipe-line-item-uuid] #(create-nested-recipe-line-item {:origin-rli-uuid (:recipe-line-item/uuid rli)
                                                                                                                     :insert-type :inside}))]
 
     (d/div {:class "item-wrapper flex flex-col"}
-           (d/div {:class "item-header-wrapper flex w-full mt-2"
+           (d/div {:class "item-header-wrapper align-center justify-center items-center flex w-full mt-2"
                    :onMouseEnter (fn [e]
                                    (.stopPropagation e)
                                    (set-is-hovering true))
                    :onMouseLeave (fn [e]
                                    (.stopPropagation e)
                                    (set-is-hovering false))}
-                  (d/div {:class "hover-menu flex flex-col align-center justify-center items-center w-8 mr-2 h-full"}
+                  (d/div {:class "hover-menu flex align-center justify-center items-center w-8 mr-2 h-full"}
+
                          (when is-hovering?
                            ($ AddRowMenu {:on-add-row-below on-add-row-below
                                           :on-add-row-inside on-add-row-inside})))
-                  (d/div {:class "flex w-full border"}
-                         (when has-children?
-                           (d/div {:class "border-r p-2 cursor-pointer"
-                                   :onClick (fn []
-                                              (set-is-showing-children-state (not is-showing-children?)))}
-                                  (if is-showing-children?
-                                    ($ Button {:icon "chevron-down"
-                                               :minimal true})
-
-                                    ($ Button {:icon "chevron-right"
-                                               :minimal true}))))
-                         (d/div {:class "flex items-center justify-between w-full p-2"}
-                                (d/div {:class "flex w-1/2 items-center"}
-                                       ($ :span {:class "w-6/12"} (str item-name #_item-uuid #_recipe-line-item-position)))
-                                ($ QuantityEditor {:label "Qty"
-                                                   :uuid recipe-line-item-uuid
-                                                   :qty recipe-line-item-quantity
-                                                   :uom-code recipe-line-item-quantity-uom
-                                                   :options [{:title "gr"
-                                                              :uom-code "gr"}
-                                                             {:title "lb"
-                                                              :uom-code "lb"}]
-                                                   :on-quantity-changed update-recipe-line-item-quantity-handler
-                                                   :on-uom-changed recipe-line-item-quantity-uom-selected-handler})
-
-                                ($ Button {:icon "cog"
-                                           :minimal true
-                                           :onClick (fn []
-                                                      (is-settings-open-state (not is-settings-open?)))}))))
-
-           (when is-settings-open?
-             (let [production-type (:item-production-type item)]
-               (case production-type
-                 :production.type/ATOM ($ AtomicItemSettings {:item-uuid item-uuid
-
-                                                              :item-yield-uom (or item-yield-uom
-                                                                                  item-default-uom)
-
-                                                              :recipe-line-item-uuid recipe-line-item-uuid
-                                                              :recipe-line-item-quantity recipe-line-item-quantity
-
-                                                              :recipe-line-item-quantity-uom recipe-line-item-quantity-uom})
-                 :production.type/COMPOSITE ($ CompositeItemSettings {:item-uuid item-uuid
-                                                                      :item-yield (or item-yield
-                                                                                      1)
-                                                                      :item-yield-uom (or item-yield-uom
-                                                                                          item-default-uom)
-
-                                                                      :recipe-line-item-uuid recipe-line-item-uuid
-                                                                      :recipe-line-item-quantity recipe-line-item-quantity
-
-                                                                      :recipe-line-item-quantity-uom recipe-line-item-quantity-uom})
-                 :else (d/div "No matching production type found"))))
+                  (if is-draft?
+                    ($ DraftRecipeLineItem {:rli rli})
+                    ($ PublishedRecipeLineItem {:rli rli
+                                                :has-children? has-children?
+                                                :is-showing-children? is-showing-children?
+                                                :set-is-showing-children-state set-is-showing-children-state
+                                                :update-recipe-line-item-quantity-handler update-recipe-line-item-quantity-handler
+                                                :recipe-line-item-quantity-uom-selected-handler recipe-line-item-quantity-uom-selected-handler
+                                                :is-settings-open-state is-settings-open-state
+                                                :is-settings-open? is-settings-open?})))
 
            (when (and has-children?
                       is-showing-children?)
              ($ :div
-                ($ rdd.components.items.item-editor/Children {:item item
-                                                              :update-recipe-line-item-quantity-uom-handler update-recipe-line-item-quantity-uom-handler
-                                                              :create-recipe-line-item create-recipe-line-item}))))))
-
-
-(defnc Children
-  "Composite children container. Contains all the recipe line items"
-  [{:keys [update-recipe-line-item-quantity-uom-handler
-           create-recipe-line-item]
-    {:keys [children]} :item}]
-
-  (d/div {:class "flex h-full"}
-         (d/div {:class "w-8 h-full"}
-                (d/div {:class "border-l border-dashed h-full my-2 ml-4"}))
-         (d/div {:class "flex flex-col w-full"}
-                (for-indexed [child index children]
-                             ($ rdd.components.items.item-editor/Item
-                                {:key (:item-uuid child)
-                                 :index (inc index)
-                                 :item child
-                                 :create-recipe-line-item create-recipe-line-item
-                                 :update-recipe-line-item-quantity-uom-handler update-recipe-line-item-quantity-uom-handler})))))
-
+                (d/div {:class "ml-4"}
+                       (for-indexed [rli index sorted-children]
+                                    ($ RecipeLineItemWrapper {:key (:recipe-line-item/uuid rli)
+                                                              :rli rli
+                                                              :index index}))))))))
 
