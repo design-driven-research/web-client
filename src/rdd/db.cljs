@@ -9,11 +9,7 @@
 (defn item-schema
   []
   {:item/name {:db/unique :db.unique/identity}
-   :item/uuid {:db/unique :db.unique/identity}
-
-
-   #_#_:item/categories {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
-   #_#_:item/tags {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
+   :item/uuid {:db/unique :db.unique/identity}})
 
 (defn company-schema
   []
@@ -36,23 +32,13 @@
   []
   {:quote/uuid {:db/unique :db.unique/identity}})
 
-#_(defn category-schema
-    []
-    {:category/name {:db/unique :db.unique/identity}
-     :category/parents {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
-     :category/children {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
-
 (defn recipe-line-item-schema
   []
   {:recipe-line-item/uuid  {:db/unique :db.unique/identity}
+   :recipe-line-item/item {:db/valueType :db.type/ref
+                           :db/cardinality :db.cardinality/one}
    :recipe-line-item/company-item {:db/valueType :db.type/ref
                                    :db/cardinality :db.cardinality/one}})
-
-#_(defn tag-schema
-    []
-    {:tag/name {:db/unique :db.unique/identity}
-     :tag/items {:db/valueType :db.type/ref
-                 :db/cardinality :db.cardinality/many}})
 
 (defn uom-schema
   []

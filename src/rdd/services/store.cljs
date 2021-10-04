@@ -208,24 +208,22 @@
                         :item/total-cost total-children-cost
                         :item/children children}))
 
-        build-recipe-line-item (fn [recipe-line-item]
-                                 (let [children (:composite/contains recipe-line-item)
-                                       has-children? (seq children)
-                                       item (when has-children?
-                                              (item->tree' (first (:composite/contains recipe-line-item))))
-                                       has-item? (boolean item)
-                                       item-uuid (:item-uuid item)
-                                       recipe-line-item-uuid (:recipe-line-item/uuid recipe-line-item)
-                                       recipe-line-item-quantity (:measurement/quantity recipe-line-item)
-                                       recipe-line-item-quantity-uom (-> recipe-line-item :measurement/uom :uom/code)
-                                       recipe-line-item-position (-> recipe-line-item :meta/position)
+        build-recipe-line-item (fn [rli]
+                                 (let [child-item (:recipe-line-item/item rli)
+                                       has-child? (boolean child-item)
+                                       item (when has-child? (item->tree' child-item))
+                                       item-uuid (:item/uuid item)
+                                       recipe-line-item-uuid (:recipe-line-item/uuid rli)
+                                       recipe-line-item-quantity (:measurement/quantity rli)
+                                       recipe-line-item-quantity-uom (-> rli :measurement/uom :uom/code)
+                                       recipe-line-item-position (-> rli :meta/position)
 
                                       ;;  Should we instead check for if this is composite or atom type item?
                                       ;;  Need to simplify this
-                                       child-uom->rli-uom-conversion (when has-item?
+                                       child-uom->rli-uom-conversion (when has-child?
                                                                        (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom (or (:item/yield-uom item)
                                                                                                                                                                            (:item/default-uom item)))))
-                                       converted-composite-item-cost (when has-item? (* (:item/cost-per-default-uom item) child-uom->rli-uom-conversion))
+                                       converted-composite-item-cost (when has-child? (* (:item/cost-per-default-uom item) child-uom->rli-uom-conversion))
 
                                        recipe-line-item-total-cost (or
                                                                     converted-composite-item-cost
@@ -347,8 +345,8 @@
   [db rli-uuid]
   (->> (d/q '[:find [?item-uuid]
               :in $ ?rli-uuid
-              :where [?eid :recipe-line-item/uuid ?rli-uuid]
-              [?item :composite/contains ?eid]
+              :where [?rli :recipe-line-item/uuid ?rli-uuid]
+              [?item :composite/contains ?rli]
               [?item :item/uuid ?item-uuid]]
             db rli-uuid)
        first))

@@ -81,17 +81,16 @@
 
 (defn build-recipe-line-items-tx-data
   [recipe-line-items]
-  (tap> recipe-line-items)
   (for [rli recipe-line-items]
     (let [uuid (-> rli :recipe-line-item/uuid)
           quantity (-> rli :measurement/quantity)
           uom-temp-id (-> rli :measurement/uom :uom/uuid)
-          child-temp-id (-> rli :composite/contains (first) :item/uuid)
+          child-temp-id (-> rli :recipe-line-item/item :item/uuid)
           position (-> rli :meta/position)]
       {:db/id uuid
        :recipe-line-item/uuid uuid
        :meta/position position
-       :composite/contains child-temp-id
+       :recipe-line-item/item child-temp-id
        :measurement/quantity quantity
        :measurement/uom uom-temp-id})))
 
