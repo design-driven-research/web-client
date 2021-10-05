@@ -12,8 +12,8 @@
   (d/div {:class "item-quantity flex items-center"}
          (d/span {:class "mr-4"} label)
          ($ SimpleSelect {:value item-yield-uom
-                          :on-selected #(item-yield-uom-changed-handler {:uuid item-uuid
-                                                                         :uom (:uom-code %)})
+                          :on-existing-selected #(item-yield-uom-changed-handler {:uuid item-uuid
+                                                                                  :uom (:uom-code %)})
                           :options [{:title "gr"
                                      :uom-code "gr"}
                                     {:title "lb"

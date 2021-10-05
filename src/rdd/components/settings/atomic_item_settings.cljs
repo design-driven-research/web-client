@@ -4,13 +4,15 @@
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [rdd.components.forms.item-conversions-settings :as ItemConversionSettings]
-            [rdd.components.forms.item-labor-settings :as ItemLaborSettings]
             [rdd.components.forms.item-default-settings :refer [ItemDefaultSettings]]
             [rdd.providers.item-provider :refer [use-item-state]]))
 
 (defnc AtomicItemSettings
-  [{:keys [item-uuid item-yield-uom]}]
-  (let [[current-selected-index set-current-selected-index] (hooks/use-state "settings")
+  [{:keys [rli]}]
+  (let [item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
+        item-yield-uom (or (-> rli :recipe-line-item/child-item :item/yield)
+                           (-> rli :recipe-line-item/child-item :item/uom))
+        [current-selected-index set-current-selected-index] (hooks/use-state "settings")
         [_ _ builder] (use-item-state)
         item-yield-uom-changed-handler (builder :update-item-yield-uom :once)]
     (d/div {:class "p-4 border"}

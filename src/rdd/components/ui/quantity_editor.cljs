@@ -7,33 +7,38 @@
             [rdd.components.ui.simple-select :refer [SimpleSelect]]))
 
 (defnc QuantityEditor
-  "Recipe line item controls. Used to set all recipe line item level settings, qty, company-item etc."
+  "Quantity & uom control."
   [{:keys [label
-           uuid
            qty
            uom-code
            options
            on-quantity-changed
            on-uom-changed]}]
-  (let [quantity-changed-debounced (hooks/use-callback [uuid] (debounce
-                                                               #(on-quantity-changed {:uuid uuid
-                                                                                      :quantity %})
-                                                               1000))]
+  (let [[local-qty set-local-qty!] (hooks/use-state qty)
+        quantity-changed-debounced (hooks/use-callback :once (debounce
+                                                              #(on-quantity-changed {:quantity %})
+                                                              1000))
+
+        on-local-qty-changed (hooks/use-callback :once (fn [qty qty-str] (set-local-qty! qty-str)
+                                                         (quantity-changed-debounced qty)))]
+
+
+    (hooks/use-effect [qty] (set-local-qty! qty))
+
     (d/div {:class "item-quantity flex items-center"}
            (d/div {:class "flex items-center"}
                   (d/span {:class "mr-4"} label)
-                  ($ NumericInput {:defaultValue qty
-                                   :allowNumericCharactersOnly true
+                  ($ NumericInput {:value local-qty
+                                   :allowNumericCharactersOnly false
                                    :clampValueOnBlur true
                                    :minorStepSize 0.01
                                    :min 0
                                    :small true
-                                   :onValueChange quantity-changed-debounced})
+                                   :onValueChange on-local-qty-changed})
 
                   (d/div {:class "ml-2"}
                          ($ SimpleSelect {:value uom-code
-                                          :on-selected #(on-uom-changed {:uuid uuid
-                                                                         :uom (:uom-code %)})
+                                          :on-existing-selected #(on-uom-changed {:uom-code (:uom-code %)})
                                           :options options}))))))
 
 

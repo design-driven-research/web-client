@@ -9,6 +9,7 @@
            on-add-row-inside]}]
   (d/div {:class "h-full"}
          ($ Popover2 {:placement "bottom-start"
+                      :usePortal false
                       :content (d/div {:class "border"}
                                       ($ Menu
                                          ($ MenuItem {:key "inside"

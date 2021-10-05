@@ -1,6 +1,7 @@
 (ns rdd.components.ui.simple-select
   (:require ["@blueprintjs/core" :refer [Button MenuItem]]
             ["@blueprintjs/select" :refer [Select]]
+            [clojure.string :as s]
             [applied-science.js-interop :as j]
             [helix.core :refer [$ defnc]]
             [helix.hooks :as hooks]))
@@ -9,15 +10,24 @@
   "A simple select expects the following props
    value - A scalar
    options - A vector of maps. Each map must include a :title key
-   on-selected - Handler called on click or enter of new option
+   on-existing-selected - Handler called on click or enter of an existing option
+   on-create-selected - Handler called on click or enter of 'Create new'
+   create-new-label - The label to display in the create new menu item
 
    Example ($ SimpleSelect {:value 'gr' :options [{:title 'gr'} {:title 'lb'}] :on-selected on-selected-handler})
    "
   [{:keys [value
            options
-           on-selected]}]
+           create-new-label
+           on-existing-selected
+           on-create-selected]}]
 
-  (let [on-selected-wrapper (fn [val] (on-selected (js->clj val :keywordize-keys true)))
+  (let [on-selected-wrapper (fn [val]
+                              (let [option (js->clj val :keywordize-keys true)
+                                    is-create? (= :create (:type option))]
+                                (if is-create?
+                                  (on-create-selected option)
+                                  (on-existing-selected option))))
         renderer (hooks/use-memo :once (fn [item opts]
                                          (j/let [^js {:keys [title]} item]
                                            ($ MenuItem {:onClick #(on-selected-wrapper item)
@@ -25,13 +35,33 @@
                                                         :key title
                                                         :text title}))))
 
-        predicate-filter (hooks/use-memo :once (fn [query film index exactMatch]
-                                                 (if (empty? query)
-                                                   true
-                                                   (re-find (re-pattern query) (.. film -title)))))]
+        create-new-renderer (hooks/use-memo :once (fn [query opts]
+                                                    ($ MenuItem {:onClick #(on-selected-wrapper
+                                                                            {:type :create
+                                                                             :query query})
+                                                                 :icon "add"
+                                                                 :active opts
+                                                                 :key "new"
+                                                                 :text (if create-new-label
+                                                                         (str create-new-label " " query)
+                                                                         query)})))
+
+        predicate-filter (hooks/use-memo [options] (fn [query option]
+                                                     (if (empty? query)
+                                                       true
+                                                       (let [option-title (s/lower-case (j/get option :title))
+                                                             query (s/lower-case query)
+                                                             pattern (re-pattern query)]
+                                                         (re-find pattern option-title)))))
+
+        create-new-from-query-handler (hooks/use-callback :once (fn [query option]
+                                                                  {:type :create
+                                                                   :query query}))]
 
     ($ :div
        ($ Select {:popoverProps (j/lit {:minimal true})
+                  :createNewItemFromQuery create-new-from-query-handler
+                  :createNewItemRenderer create-new-renderer
                   :itemRenderer renderer
                   :itemPredicate predicate-filter
                   :onItemSelect #(on-selected-wrapper %)

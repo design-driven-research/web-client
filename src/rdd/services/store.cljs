@@ -35,6 +35,8 @@
          :where
          [?eid :item/uuid ?uuid]] (db)))
 
+#_(get-items)
+
 (defn get-recipe-line-items
   "Get all recipe line items"
   []
@@ -436,9 +438,16 @@
                                           [:db/add [:item/uuid parent-item-uuid] :composite/contains -1]])))
 
 
+(defn update-recipe-line-item-item!
+  [rli-uuid item-uuid]
+  (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
 
-
-;; => :repl/exception!
+(defn create-and-link-item!
+  [rli-uuid item-name item-type]
+  (db-core/transact-from-local! (conn) [[:db/add -1 :item/uuid (nano-id)]
+                                        [:db/add -1 :item/name item-name]
+                                        [:db/add -1 :item/production-type item-type]
+                                        [:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item -1]]))
 
 
 (comment

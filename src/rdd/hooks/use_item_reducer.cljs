@@ -11,7 +11,8 @@
    "
   [product-name]
   (let [initial-state {:current-product-name product-name
-                       :item (store/item->tree product-name)}
+                       :item (store/item->tree product-name)
+                       :items (store/get-items)}
 
         [state dispatch!] (hooks/use-reducer rer/reducer initial-state)
 
@@ -22,4 +23,3 @@
                      (dispatch! [topic args]))))]
 
     [state dispatch! builder]))
-
