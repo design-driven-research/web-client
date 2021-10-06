@@ -12,6 +12,7 @@
             [rdd.components.menus.add-row-menu :refer [AddRowMenu]]
             [rdd.components.settings.atomic-item-settings :refer [AtomicItemSettings]]
             [rdd.components.settings.composite-item-settings :refer [CompositeItemSettings]]
+            [rdd.components.forms.create-company-item :refer [CreateNewCompanyItem]]
             [rdd.components.ui.quantity-editor :refer [QuantityEditor]]
             [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.utils.for-indexed :refer [for-indexed]]))
@@ -26,6 +27,7 @@
   (let [has-children? (seq children)
         sorted-children (sort-by :recipe-line-item/position children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
+           ($ CreateNewCompanyItem)
            (d/h1 (:item-name item))
            (d/p {:class "text-lg"} "Total cost: $" (js/parseInt total-cost))
 

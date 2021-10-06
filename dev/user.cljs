@@ -1,235 +1,124 @@
 (ns dev.user
   (:require [datascript.core :as d]
+            [tilakone.core :as tk :refer [_]]
             [rdd.db :as db]))
 
-(def sample '({:value
-               {:measured_in ({:_type "UOM", :name "Each", :_id 16, :code "ea", :type "COUNT"})
-                :yield 1.0
-                :_type "Item"
-                :name "Chorizo Family Pack"
-                :_id 23
-                :made_of
-                ({:_type "RecipeLineItem"
-                  :measured_in ({:code "ea", :_type "UOM", :name "Each", :measured_in.quantity 50, :_id 16, :type "COUNT"})
-                  :_id 31
-                  :made_of
-                  ({:measured_in ({:_type "UOM", :name "Each", :_id 16, :code "ea", :type "COUNT"})
-                    :yield 1.0
-                    :_type "Item"
-                    :name "Chorizo Wrap"
-                    :_id 22
-                    :made_of
-                    ({:_type "RecipeLineItem"
-                      :measured_in
-                      ({:code "gr"
-                        :divides_into ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                        :_type "UOM"
-                        :name "Gram"
-                        :measured_in.quantity 30
-                        :_id 14
-                        :type "WEIGHT"})
-                      :_id 30
-                      :made_of
-                      ({:measured_in
-                        ({:code "gr"
-                          :divides_into
-                          ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                          :_type "UOM"
-                          :name "Gram"
-                          :_id 14
-                          :type "WEIGHT"})
-                        :yield 30.0
-                        :_type "Item"
-                        :name "Master Mix"
-                        :_id 21
-                        :made_of
-                        ({:_type "RecipeLineItem"
-                          :measured_in
-                          ({:code "gr"
-                            :divides_into
-                            ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                            :_type "UOM"
-                            :name "Gram"
-                            :measured_in.quantity 20
-                            :_id 14
-                            :type "WEIGHT"})
-                          :_id 29
-                          :made_of
-                          ({:measured_in
-                            ({:code "gr"
-                              :divides_into
-                              ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                              :_type "UOM"
-                              :name "Gram"
-                              :_id 14
-                              :type "WEIGHT"})
-                            :yield 20.0
-                            :_type "Item"
-                            :name "Spicy Sauce"
-                            :_id 19
-                            :made_of
-                            ({:_type "RecipeLineItem"
-                              :measured_in
-                              ({:code "lb"
-                                :divides_into
-                                ({:divides_into.quantity 453.1
-                                  :code "gr"
-                                  :divides_into
-                                  ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                                  :_type "UOM"
-                                  :name "Gram"
-                                  :_id 14
-                                  :type "WEIGHT"})
-                                :_type "UOM"
-                                :name "Pound"
-                                :measured_in.quantity 10
-                                :_id 13
-                                :type "WEIGHT"})
-                              :_id 28
-                              :made_of
-                              ({:measured_in
-                                ({:code "gr"
-                                  :divides_into
-                                  ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                                  :_type "UOM"
-                                  :name "Gram"
-                                  :_id 14
-                                  :type "WEIGHT"})
-                                :yield 1.0
-                                :variant_of
-                                ({:_type "SKU"
-                                  :quoted
-                                  ({:_type "Price"
-                                    :measured_in
-                                    ({:code "lb"
-                                      :divides_into
-                                      ({:divides_into.quantity 453.1
-                                        :code "gr"
-                                        :divides_into
-                                        ({:divides_into.quantity 1
-                                          :code "gr"
-                                          :_type "UOM"
-                                          :name "Gram"
-                                          :_id 14
-                                          :type "WEIGHT"})
-                                        :_type "UOM"
-                                        :name "Gram"
-                                        :_id 14
-                                        :type "WEIGHT"})
-                                      :_type "UOM"
-                                      :name "Pound"
-                                      :measured_in.quantity 5
-                                      :_id 13
-                                      :type "WEIGHT"})
-                                    :_id 26
-                                    :price 25.0})
-                                  :_id 25
-                                  :sku "P001"})
-                                :_type "Item"
-                                :name "Pepper"
-                                :_id 18})}
-                             {:_type "RecipeLineItem"
-                              :measured_in
-                              ({:code "lb"
-                                :divides_into
-                                ({:divides_into.quantity 453.1
-                                  :code "gr"
-                                  :divides_into
-                                  ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                                  :_type "UOM"
-                                  :name "Gram"
-                                  :_id 14
-                                  :type "WEIGHT"})
-                                :_type "UOM"
-                                :name "Pound"
-                                :measured_in.quantity 20
-                                :_id 13
-                                :type "WEIGHT"})
-                              :_id 27
-                              :made_of
-                              ({:_type "Item"
-                                :name "Salt"
-                                :measured_in
-                                ({:code "gr"
-                                  :divides_into
-                                  ({:divides_into.quantity 1, :code "gr", :_type "UOM", :name "Gram", :_id 14, :type "WEIGHT"})
-                                  :_type "UOM"
-                                  :name "Gram"
-                                  :_id 14
-                                  :type "WEIGHT"})
-                                :_id 17
-                                :yield 1.0})})})})})})})})}}))
+
+(def light-machine
+  {::tk/states [{::tk/name        "green"
+                 ::tk/transitions [{::tk/on :timer
+                                    ::tk/to "yellow"
+                                    ::tk/actions [[:yo]]
+                                    ::tk/guards [:my-guard]}
+                                   {::tk/on _
+                                    ::tk/guards [:shit-guard]
+                                    ::tk/to "shit"}
+                                   {::tk/on _
+                                    ::tk/to "red"}]}
+                {::tk/name        "yellow"
+                 ::tk/transitions [{::tk/on :timer
+                                    ::tk/to "red"
+                                    ::tk/guards [:red-guard]}]}
+                {::tk/name        "red"
+                 ::tk/transitions [{::tk/on :timer
+                                    ::tk/to "green"
+                                    ::tk/guards [:red-guard]}]}
+                {::tk/name        "shit"}]
+   ::tk/action! (fn [{::tk/keys [signal action] :as fsm}]
+                  #_(tap> fsm)
+                  (update fsm :trace conj (into [signal] action))
+                  #_fsm)
+   ::tk/guard? (fn [fsm]
+                 (tap> {:tap "Inside guard?"
+                        :fsm fsm})
+                 false)
+   ::tk/state  "green"
+   :context {:sup :son}})
+
+(->> (repeat 5 :timer)
+     (reduce tk/apply-signal light-machine)
+     ::tk/state)
 
 
-;; => {:_type "Item",
-;;     :name "Chorizo Family Pack",
-;;     :_id 23,
-;;     :made_of
-;;     ({:_type "RecipeLineItem",
-;;       :measured_in ({:code "ea", :_type "UOM", :name "Each", :measured_in.quantity 50, :_id 16, :type "COUNT"}),
-;;       :_id 31,
-;;       :made_of
+(-> (tk/apply-signal light-machine :timer)
+    ::tk/state)
+(tk/apply-signal light-machine "TIMER")
 
-(declare create-recipe-line-item!
-         create-recipe-line-items!
-         create-item!
-         create-uom!)
+(tk/transfers-to light-machine "TIMER")
 
-(defn create-uom!
-  [data]
 
-  (let [id (-> data :_id)
-        name (-> data :name)
-        code (-> data :code)
-        ;; type (-> data :type)
+(def count-ab
+  [{::tk/name        :start
+    ::tk/transitions [{::tk/on      \a
+                       ::tk/to      :found-a
+                       ::tk/actions [[:action :start :found-a]]}
+                      {::tk/on      _
+                       ::tk/actions [[:action :start :start]]}]
+    ::tk/enter       {::tk/actions [[:enter :start]]}
+    ::tk/leave       {::tk/actions [[:leave :start]]}
+    ::tk/stay        {::tk/actions [[:stay :start]]}}
 
-        payload {:db/id id
-                 :uom/name name
-                 :uom/code code
-                 #_#_:uom/type type}]
+   {::tk/name        :found-a
+    ::tk/transitions [{::tk/on      \a
+                       ::tk/actions [[:action :found-a :found-a]]}
+                      {::tk/on      \b
+                       ::tk/actions [[:action :found-a :found-a :via-guard-1]]}
+                      {::tk/on      _
+                       ::tk/to      :start
+                       ::tk/actions [[:action :found-a :start :via-b-_]]}]
+    ::tk/enter       {::tk/actions [[:enter :found-a]]}
+    ::tk/leave       {::tk/actions [[:leave :found-a]]}
+    ::tk/stay        {::tk/actions [[:stay :found-a]]}}])
 
-    (d/transact! db/dsdb [payload])
-    id))
+(def count-ab-process {::tk/states  count-ab
+                       ::tk/action! (fn [{::tk/keys [signal action] :as fsm}]
+                                      (update fsm :trace conj (into [signal] action)))
+                       ::tk/state   :start})
 
-(defn create-recipe-line-item!
-  [data]
-  (let [id (-> data :_id)
-        child-data (-> data :made_of first)
-        uom-code (-> data :measured_in first :code)
-        quantity (-> data :measured_in first :measured_in.quantity)
+(let [count-ab (assoc count-ab-process :trace [])]
+  (-> (reduce tk/apply-signal count-ab "xxababbax")
+      :trace))
 
-        child-item-id (create-item! child-data)
 
-        payload {:db/id id
-                 :recipe-line-item/child child-item-id
-                 :recipe-line-item/uom [:uom/code uom-code]
-                 :recipe-line-item/quantity quantity}]
+(def form-states-2 [{::tk/name        :default
+                     :my-buddy "and me"
+                     ::tk/transitions [{::tk/on :CREATE
+                                        ::tk/to :selected-vendor}]}
 
-    (d/transact! db/dsdb [payload])
-    id))
+                    {::tk/name        :selected-vendor
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-info}
+                                       {::tk/on :CREATE
+                                        ::tk/to :selected-vendor.create}]}
 
-(defn create-recipe-line-items!
-  [recipe-line-items]
-  (mapv create-recipe-line-item! recipe-line-items))
+                    {::tk/name        :selected-vendor.create
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-info}]}
 
-(defn create-item!
-  [data]
-  (let [id (-> data :_id)
-        name (-> data :name)
-        yield (-> data :yield)
-        uom-code (-> data :measured_in first :code)
-        recipe-line-items-data (-> data :made_of)
-        recipe-line-item-ids (create-recipe-line-items! recipe-line-items-data)
+                    {::tk/name        :edit-info
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-pricing}]}
 
-        payload {:db/id id
-                 :item/yield yield
-                 :item/uom [:uom/code uom-code]
-                 :item/name name
-                 :item/children recipe-line-item-ids}]
-    (d/transact! db/dsdb [payload])
-    id))
+                    {::tk/name        :edit-pricing
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-usage}]}
 
-#_(-> sample
-      first
-      :value
-      create-item!)
+                    {::tk/name        :edit-usage
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-conversions}
+                                       {::tk/on :CREATE
+                                        ::tk/to :edit-usage.create-uom}]}
+
+                    {::tk/name        :edit-usage.create-uom
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :edit-conversions}]}
+
+                    {::tk/name        :edit-conversions
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :finalalize}]}
+
+                    {::tk/name        :edit-conversions.create-uom
+                     ::tk/transitions [{::tk/on :SUBMIT
+                                        ::tk/to :finalalize}]}
+
+                    {::tk/name        :finalalize}])
