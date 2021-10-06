@@ -122,3 +122,8 @@
                                         ::tk/to :finalalize}]}
 
                     {::tk/name        :finalalize}])
+
+
+(-> (tk/apply-signal {::tk/states form-states-2
+                      ::tk/state :default} :CREATE)
+    ::tk/state)
