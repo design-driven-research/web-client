@@ -23,9 +23,10 @@
   "dependencies": {
     "@blueprintjs/core": "^3.50.1",
     "@blueprintjs/icons": "^3.30.1",
-    "@blueprintjs/popover2": "^0.12.1",
+    "@blueprintjs/popover2": "^1.0.0-beta.1",
     "@blueprintjs/select": "^3.18.3",
     "@headlessui/react": "^1.4.0",
+    "@popperjs/core": "^2.10.2",
     "@tailwindcss/forms": "^0.3.3",
     "cross-env": "^7.0.3",
     "react": "^18.0.0-alpha-bdd6d5064-20211001",
