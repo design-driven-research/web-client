@@ -27,7 +27,7 @@
   (let [has-children? (seq children)
         sorted-children (sort-by :recipe-line-item/position children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
-           #_($ CreateNewCompanyItem)
+           ($ CreateNewCompanyItem)
            (d/h1 (:item-name item))
            (d/p {:class "text-lg"} "Total cost: $" (js/parseInt total-cost))
 
