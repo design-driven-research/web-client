@@ -28,17 +28,21 @@
 
         ;; Derived values
         context-path (into base-path [::context])
-        validations-path (into base-path [::validations])]
+        validations-path (into base-path [::validations])
+        touches-path (into base-path [::touches])
+
+        context (::context state)
+        validations (::validations state)
+        touches (::touches state)]
 
     {:state state
      :base-path base-path
      :context-path context-path
-     :validations-path validations-path}))
-
-(defn update-context!
-  [fsm id value]
-  (let [{:keys [context-path]} (state-info fsm id)]
-    (assoc-in fsm context-path value)))
+     :context context
+     :validations validations
+     :validations-path validations-path
+     :touches-path touches-path
+     :touches touches}))
 
 (defn validate-state!
   [fsm id]
@@ -54,3 +58,24 @@
                             fields)]
 
     (assoc-in fsm validations-path validations)))
+
+(defn update-context-field!
+  [fsm id field-id value]
+  (let [{:keys [context-path]} (state-info fsm id)
+        field-path (into context-path [field-id])]
+    (-> (assoc-in fsm field-path value)
+        (validate-state! id))))
+
+(defn update-context!
+  [fsm id value]
+  (let [{:keys [context-path base-path]} (state-info fsm id)]
+    (-> (assoc-in fsm context-path value)
+        (update-in base-path dissoc ::validations))))
+
+(defn touch-field!
+  [fsm id field-id]
+  (let [{:keys [touches-path]} (state-info fsm id)
+        touch-path (into touches-path [field-id])]
+    (-> (assoc-in fsm touch-path true)
+        (validate-state! id))))
+

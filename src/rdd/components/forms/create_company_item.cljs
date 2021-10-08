@@ -1,7 +1,7 @@
 (ns rdd.components.forms.create-company-item
   (:require [tilakone.core :as tk :refer [_]]
             [rdd.utils.css-utils :refer [get-class]]
-            [rdd.utils.fsm-utils :refer [states-lookup-table state-index-lookup-table]]
+
             [helix.hooks :as hooks]
             [rdd.utils.for-indexed :refer [for-indexed]]
             [applied-science.js-interop :as j]
@@ -23,17 +23,17 @@
             [helix.core :refer [$ defnc]]
             [helix.dom :as d]))
 
-(s/def ::string string?)
+(s/def ::info (s/and string? #(> (count %) 2)))
 
 (def states [{::bi/id :select-vendor
               ::bi/fields [{::bi/id :company/name
-                            ::bi/spec ::string}
+                            ::bi/spec ::info}
                            {::bi/id :company/uuid
-                            ::bi/spec ::string}]
+                            ::bi/spec ::info}]
               :label "Select vendor"}
              {::bi/id :edit-info
               ::bi/fields [{::bi/id :info/name
-                            ::bi/spec ::string}
+                            ::bi/spec ::info}
                            {::bi/id :info/description}]
               :label "Edit item info"}])
 
@@ -44,23 +44,52 @@
                  :label "Edit info (Required)"}
       ($ InputGroup {:id "text-input"
                      :placeholder "Enter item name"}))
-
    ($ Button {:intent "primary"
               :text "Create"})))
 
 (defnc SelectVendorForm
   [{:keys [state-info
-           on-vendor-name-changed]}]
-  (let [context (:context state-info)]
-    (tap> {:context context})
+           on-touch
+           on-submit
+           on-field-change]}]
+  (let [validations (:validations state-info)
+        context (:context state-info)
+        touches (:touches state-info)
+
+        name-invalid? (and (not (:company/name validations))
+                           (:company/name touches))
+
+        uuid-invalid? (and (not (:company/uuid validations))
+                           (:company/uuid touches))
+
+        valid? (= #{true} (set (vals validations)))]
+
+    (tap> {:validations validations
+           :context context
+           :touches touches})
     (d/div
+
      ($ FormGroup {:helperText "Helper text"
                    :label "New vendor (Required)"}
-        ($ InputGroup {:id "text-input"
-                       :onChange on-vendor-name-changed
+        (when name-invalid? (d/span "Invalid"))
+        ($ InputGroup {:id "company-name"
+                       :value (or (:company/name context) "")
+                       :onChange #(on-field-change :company/name %)
+                       :onBlur #(on-touch :company/name)
                        :placeholder "Enter ventor name"}))
 
+     ($ FormGroup {:helperText "Helper text"
+                   :label "New vendor (Required)"}
+        (when uuid-invalid? (d/span "Invalid"))
+        ($ InputGroup {:id "company-uuid"
+                       :value (or (:company/uuid context) "")
+                       :onChange #(on-field-change :company/uuid %)
+                       :onBlur #(on-touch :company/uuid)
+                       :placeholder "Enter ventor uuid"}))
+
      ($ Button {:intent "primary"
+                :disabled (not valid?)
+                :onClick on-submit
                 :text "Create"}))))
 
 (defnc CreateNewCompanyItem
@@ -78,9 +107,18 @@
         {:keys [state context]} state-info
 
         ;; Callbacks
-        on-vendor-name-changed (hooks/use-callback :once (fn [e]
-                                                           (let [val (j/get-in e [:target :value])]
-                                                             (set-fsm! (bi/update-context! fsm :select-vendor {:company/name val})))))]
+        on-field-change (hooks/use-callback [fsm] (fn [field-id e]
+                                                    (let [val (j/get-in e [:target :value])
+                                                          updated (bi/update-context-field! fsm :select-vendor field-id val)]
+                                                      (set-fsm! updated))))
+
+        on-submit (hooks/use-callback [fsm] (fn [_]
+                                              (let [validated (bi/validate-state! fsm :select-vendor)]
+                                                (set-fsm! validated))))
+
+        on-touch (hooks/use-callback [fsm] (fn [field-id]
+                                             (let [touched (bi/touch-field! fsm :select-vendor field-id)]
+                                               (set-fsm! touched))))]
 
     ($ Dialog {:style (clj->js {:padding-bottom "0"
                                 :min-width "800px"})
@@ -100,7 +138,9 @@
                             (d/div
                              (case current-state-id
                                :select-vendor ($ SelectVendorForm {:state-info state-info
-                                                                   :on-vendor-name-changed on-vendor-name-changed})
+                                                                   :on-touch on-touch
+                                                                   :on-submit on-submit
+                                                                   :on-field-change on-field-change})
                                :edit-info ($ EditInfoForm)
                                :else (d/div "No form found"))))
                      (d/div {:class (get-class :MULTISTEP_DIALOG_FOOTER)}
