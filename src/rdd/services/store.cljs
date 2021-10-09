@@ -1,12 +1,11 @@
 (ns rdd.services.store
   (:require [clojure.set]
-            [postmortem.core :as pm]
-            [rdd.services.event-bus :as eb]
             [datascript.core :as d]
             [nano-id.core :refer [nano-id]]
-            [rdd.converters.item :as item-converter]
+            [postmortem.core :as pm]
             [rdd.converters.uom :as uom-converters]
-            [rdd.db :as db-core]))
+            [rdd.db :as db-core]
+            [rdd.services.event-bus :as eb]))
 
 (defn- conn
   []

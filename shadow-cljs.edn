@@ -7,7 +7,9 @@
    :asset-path "js"
    :dev {:compiler-options {:output-feature-set :es6}}
    :modules {:main {:init-fn rdd.core/init!}}
-   :release {:compiler-options {:optimizations :advanced}}}}}
+   :release {:compiler-options {:optimizations :advanced}}
+   :devtools {:reload-strategy :full
+              :preloads [rdd.dev]}}}}
 
 
 

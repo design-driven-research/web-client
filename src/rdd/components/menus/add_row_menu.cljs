@@ -1,7 +1,8 @@
 (ns rdd.components.menus.add-row-menu
   (:require ["@blueprintjs/core" :refer [Button Menu MenuItem]]
             ["@blueprintjs/popover2" :refer [Popover2]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]))
 
 (defnc AddRowMenu

@@ -1,7 +1,6 @@
 (ns rdd.hooks.use-item-reducer
   (:require [helix.hooks :as hooks]
-            [rdd.reducers.recipe-editor-reducer :as rer]
-            [rdd.services.store :as store]))
+            [rdd.reducers.recipe-editor-reducer :as rer]))
 
 (defn use-item-reducer
   "Use the item reducer. This provides the recipe editor reducer along with a helper function 'builer' 
@@ -19,9 +18,3 @@
                      (dispatch! [topic args]))))]
 
     [state dispatch! builder]))
-
-
-;; :current-product-name product-name
-;; :item (store/item->tree product-name)
-;; :vendors (store/get-vendors)
-;; :items (store/get-items)

@@ -21,7 +21,8 @@
                                          InputGroup
                                          Radio
                                          RadioGroup]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]))
 
 (s/def ::info (s/and string? #(> (count %) 2)))
@@ -146,13 +147,18 @@
                                                           :states children
                                                           :on-click on-click}))))))))
 
+
+(defnc Yoson
+  []
+  (d/div "hi there"))
+
 (defnc CreateNewCompanyItem
   [{:keys [vendors
            is-open?
            on-close]}]
   (let [;; Local state
         [fsm set-fsm!] (hooks/use-state {::bi/states states
-                                         ::bi/state :select-vendor})
+                                         ::bi/state  :select-vendor})
 
         ;; Extracted values
         states (::bi/states fsm)
@@ -163,7 +169,7 @@
 
         ;; Callbacks
         on-field-change (hooks/use-callback [fsm] (fn [state-id field-id e]
-                                                    (let [val (j/get-in e [:target :value])
+                                                    (let [val     (j/get-in e [:target :value])
                                                           updated (bi/update-context-field! fsm state-id field-id val)]
                                                       (set-fsm! updated))))
 
@@ -185,9 +191,9 @@
                                                        (set-fsm! updated))))
 
         on-create-new-vendor-requested (hooks/use-callback [fsm] (fn [state-id new-name]
-                                                                   (let [updated (-> (bi/swap-child-states! fsm state-id [{::bi/id :create-vendor
-                                                                                                                           :label "Create vendor"
-                                                                                                                           ::bi/fields [{::bi/id :company/name}]
+                                                                   (let [updated (-> (bi/swap-child-states! fsm state-id [{::bi/id      :create-vendor
+                                                                                                                           :label      "Create vendor"
+                                                                                                                           ::bi/fields  [{::bi/id :company/name}]
                                                                                                                            ::bi/context {:company/name new-name}}])
                                                                                      (bi/transition-to-state! :create-vendor))]
                                                                      (set-fsm! updated))))
@@ -218,7 +224,7 @@
                                                                    :on-create-new-vendor-requested (partial on-create-new-vendor-requested :select-vendor)})
                                :edit-info ($ EditInfoForm)
 
-                               (d/div "No form found"))))
+                               ($ Yoson))))
                      (d/div {:class (get-class :MULTISTEP_DIALOG_FOOTER)}
                             (d/div {:class "bp3-dialog-footer-actions"} "hey")))))))
 

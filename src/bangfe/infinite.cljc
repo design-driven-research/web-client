@@ -25,28 +25,27 @@
   (let [;; Extracted values
         base-path (lookup-path-for-state fsm id)
         state (get-in fsm base-path)
+        context (::context state)
+        validations (::validations state)
+        touches (::touches state)
+        states (::states state)
 
         ;; Derived values
         context-path (into base-path [::context])
         validations-path (into base-path [::validations])
         touches-path (into base-path [::touches])
-        states-path (into base-path [::states])
+        states-path (into base-path [::states])]
 
-        context (::context state)
-        validations (::validations state)
-        touches (::touches state)
-        states (::states state)]
-
-    {:state state
-     :base-path base-path
-     :context-path context-path
-     :context context
-     :validations validations
+    {:state            state
+     :base-path        base-path
+     :context-path     context-path
+     :context          context
+     :validations      validations
      :validations-path validations-path
-     :touches-path touches-path
-     :touches touches
-     :states-path states-path
-     :states states}))
+     :touches-path     touches-path
+     :touches          touches
+     :states-path      states-path
+     :states           states}))
 
 (defn validate-state!
   [fsm state-id]

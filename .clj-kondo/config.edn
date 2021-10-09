@@ -4,5 +4,6 @@
 
  :lint-as {applied-science.js-interop/let clojure.core/let
            helix.core/defnc clojure.core/defn
+           rdd.lib.defnc/defnc clojure.core/defn
            rdd.hello/inc-builder clojure.core/declare
            mount.core/defstate clojure.core/def}}

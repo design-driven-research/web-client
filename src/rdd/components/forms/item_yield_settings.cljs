@@ -1,5 +1,6 @@
 (ns rdd.components.forms.item-yield-settings
-  (:require [helix.core :refer [$ defnc]]
+  (:require [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [rdd.components.ui.quantity-editor :refer [QuantityEditor]]))
 

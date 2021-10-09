@@ -3,7 +3,8 @@
             ["@blueprintjs/select" :refer [Select]]
             [clojure.string :as s]
             [applied-science.js-interop :as j]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.hooks :as hooks]))
 
 (defnc SimpleSelect

@@ -1,6 +1,7 @@
 (ns rdd.components.items.item-editor
   (:require ["@blueprintjs/core" :refer [Button]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             ["react" :as react]
             [postmortem.core :as pm]
@@ -165,7 +166,6 @@
                                        {:current-state :creating
                                         :value query})))]
 
-    (tap> {:company-item company-item})
     (d/div {:class "flex w-1/2 items-center"}
 
            ($ CreateNewCompanyItem

@@ -1,6 +1,7 @@
 (ns rdd.components.settings.composite-item-settings
   (:require ["@blueprintjs/core" :refer [Tab Tabs]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [rdd.components.forms.item-conversions-settings :as ItemConversionSettings]

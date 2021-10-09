@@ -1,6 +1,7 @@
 (ns rdd.views.edit-recipe
   (:require ["@blueprintjs/core" :as hey :refer [useHotkeys]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.hooks :as hooks]
             [rdd.components.items.item-editor :as recipe-editor]
             [rdd.providers.item-provider :refer [use-item-state]]

@@ -1,6 +1,7 @@
 (ns rdd.components.dialogs.create-item-dialog
   (:require ["@blueprintjs/core" :refer [DialogStep MultistepDialog Radio RadioGroup]]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]))
 
 (defnc CreateNewIngredientDialog

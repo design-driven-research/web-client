@@ -2,7 +2,8 @@
   (:require ["@blueprintjs/core" :refer [NumericInput]]
             [rdd.utils.debounce :refer [debounce]]
             [helix.hooks :as hooks]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [rdd.components.ui.simple-select :refer [SimpleSelect]]))
 

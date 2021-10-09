@@ -1,7 +1,8 @@
 (ns rdd.components.menus.header
   (:require
    ["@blueprintjs/core" :refer [Button]]
-   [helix.core :refer [$ defnc]]
+   [helix.core :refer [$]]
+   [rdd.lib.defnc :refer [defnc]]
    [helix.dom :as d]
    [rdd.providers.item-provider :refer [use-item-state]]
    [rdd.services.store :as store]))

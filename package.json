@@ -30,7 +30,7 @@
     "cross-env": "^7.0.3",
     "react": "^18.0.0-alpha-bdd6d5064-20211001",
     "react-dom": "^18.0.0-alpha-bdd6d5064-20211001",
-    "react-refresh": "^0.11.0-alpha-bdd6d5064-20211001",
+    "react-refresh": "^0.10.0",
     "react-tracked": "^1.7.4",
     "scheduler": "^0.20.2"
   }

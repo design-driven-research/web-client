@@ -4,7 +4,8 @@
 
             [applied-science.js-interop :as j]
 
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [rdd.converters.uom]
             [helix.dom :as d]
             [helix.hooks :as hooks]

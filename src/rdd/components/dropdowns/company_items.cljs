@@ -2,7 +2,8 @@
   (:require ["@blueprintjs/core" :refer [Button InputGroup MenuItem]]
             ["@blueprintjs/select" :refer [Select]]
             [applied-science.js-interop :as j]
-            [helix.core :refer [$ defnc]]
+            [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [rdd.converters.uom]))

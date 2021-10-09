@@ -1,5 +1,6 @@
 (ns rdd.core
-  (:require [helix.core :refer [$ defnc]]
+  (:require [helix.core :refer [$]]
+            [rdd.lib.defnc :refer [defnc]]
             [mount.core :as mount]
             [rdd.components.menus.header :refer [NavBar]]
 
@@ -24,7 +25,7 @@
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))
 
-(defn ^:dev/after-load start
+(defn start
   []
   (js/console.log "Calling start")
   (.render root ($ app)))
