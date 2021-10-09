@@ -35,7 +35,12 @@
          :where
          [?eid :item/uuid ?uuid]] (db)))
 
-#_(get-items)
+(defn get-vendors
+  "Get all vendors"
+  []
+  (d/q '[:find (pull ?eid [*])
+         :where
+         [?eid :company/uuid ?uuid]] (db)))
 
 (defn get-recipe-line-items
   "Get all recipe line items"
@@ -149,6 +154,17 @@
           nil
           converted-cost)))))
 
+#_(defn company-items-for-item
+    [item-uuid]
+    (d/q '[:find (pull ?company-item [* {:company/_company-items [:company/uuid :company/name]
+                                         :company-item/item [:item/uuid]}])
+           :in $ ?item-uuid
+           :where
+           [?item :item/uuid ?item-uuid]
+           [?company-item :company-item/item ?item]]
+         (db)
+         item-uuid))
+
 (defn company-items-for-item
   [item-uuid]
   (d/q '[:find ?item-uuid ?company-item-uuid ?company-item-name ?company-item-description ?company-uuid ?company-name
@@ -166,6 +182,15 @@
          [?company :company/name ?company-name]]
        (db)
        item-uuid))
+
+(company-items-for-item "9gZsKQ_FDc30zsaTPWtlc")
+;; => #{{:item-uuid "9gZsKQ_FDc30zsaTPWtlc",
+;;       :company-item-uuid "m9wplWlRTwMBWeG4n12C8",
+;;       :company-item-name "Sea Salt, Fine",
+;;       :company-item-description "Sea salt, description",
+;;       :company-uuid "FUvbvz9dqCN5leszxXLka",
+;;       :company-name "ABC Organics"}}
+
 
 (defn get-companies
   []
@@ -219,6 +244,7 @@
                                        recipe-line-item-quantity (:measurement/quantity rli)
                                        recipe-line-item-quantity-uom (-> rli :measurement/uom :uom/code)
                                        recipe-line-item-position (-> rli :meta/position)
+                                       recipe-line-item-company-item (-> rli :recipe-line-item/company-item)
 
                                       ;;  Should we instead check for if this is composite or atom type item?
                                       ;;  Need to simplify this
@@ -237,7 +263,9 @@
                                     :recipe-line-item/total-cost recipe-line-item-total-cost
                                     :recipe-line-item/quantity-uom recipe-line-item-quantity-uom
                                     :recipe-line-item/position recipe-line-item-position
-                                    :recipe-line-item/child-item item}))
+                                    :recipe-line-item/child-item item
+                                    :recipe-line-item/company-item (pm/spy>> :rli-ci recipe-line-item-company-item)}))
+
 
         build-base-item (fn [item]
                           (let [item-uuid (:item/uuid item)
@@ -257,6 +285,13 @@
       (and is-item? has-children?) (build-item e)
       is-recipe-line-item? (build-recipe-line-item e)
       :else (build-base-item e))))
+;; => #'rdd.services.store/item->tree'
+
+#_(pm/logs)
+#_(pm/reset!)
+  ;; => {:rli-ci [nil nil nil nil nil nil nil nil nil]}
+
+
 
 #_#_(pm/logs)
 
@@ -467,8 +502,6 @@
   (item-quotes "1uXwh_BaxU7BaWroGtHXA")
 
   (get-conversions-for-item "1uXwh_BaxU7BaWroGtHXA")
-
-  (tap> (item->tree "Wrap"))
 
   ;; 
   )

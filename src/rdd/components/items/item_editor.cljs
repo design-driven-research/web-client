@@ -27,7 +27,6 @@
   (let [has-children? (seq children)
         sorted-children (sort-by :recipe-line-item/position children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
-           ($ CreateNewCompanyItem)
            (d/h1 (:item-name item))
            (d/p {:class "text-lg"} "Total cost: $" (js/parseInt total-cost))
 
@@ -53,6 +52,7 @@
   (let [;;  Extracted values
         rli-uuid (:recipe-line-item/uuid rli)
         selected-item-name (-> rli :recipe-line-item/child-item :item/name)
+        selected-item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
 
         ;; Local state
         [create-item-state set-create-item-state!] (hooks/use-state {:current-state :empty})
@@ -107,6 +107,78 @@
                             :on-create-selected on-create-selected-wrapper
                             :options options}))))
 
+(defnc CompanyItemSelector [{:keys [rli
+                                    vendors
+                                    company-items
+                                    on-item-selected
+                                    on-item-created]}]
+
+  (let [;;  Extracted values
+        rli-uuid (:recipe-line-item/uuid rli)
+
+
+        company-item (-> rli :recipe-line-item/company-item)
+        selected-item-name (str (:company-item/name company-item))
+
+        ;; Local state
+        [create-company-item-state set-create-company-item-state!] (hooks/use-state {:current-state :empty})
+
+        ;;  Derived values
+        company-item-options (map (fn [i] {:title (str (:company-name i) "-" (:company-item-description i))
+                                           :company-item-uuid (:company-item-uuid i)}) company-items)
+
+        is-create-company-item-open? (= :creating (:current-state create-company-item-state))
+
+        close-create-company-item! (hooks/use-callback :once (fn []
+                                                               (set-create-company-item-state!
+                                                                {:current-state :empty
+                                                                 :value nil})))
+
+        ;;  Callbacks
+        on-child-item-selected-wrapper (hooks/use-callback
+                                        :once
+                                        (fn
+                                          [{:as args
+                                            :keys [item-uuid]}]
+                                          (on-item-selected
+                                           {:rli-uuid rli-uuid
+                                            :item-uuid item-uuid})))
+
+        handle-create-item-submit (hooks/use-callback
+                                   :once
+                                   (fn
+                                     [{:keys [item-name item-type]}]
+                                     (on-item-created
+                                      {:rli-uuid rli-uuid
+                                       :item-name item-name
+                                       :item-type item-type})
+                                     (set-create-company-item-state!
+                                      {:current-state :empty
+                                       :value nil})))
+
+        on-create-selected-wrapper (hooks/use-callback
+                                    :once
+                                    (fn
+                                      [{:as args
+                                        :keys [query]}]
+                                      (set-create-company-item-state!
+                                       {:current-state :creating
+                                        :value query})))]
+
+    (tap> {:company-item company-item})
+    (d/div {:class "flex w-1/2 items-center"}
+
+           ($ CreateNewCompanyItem
+              {:vendors vendors
+               :is-open? is-create-company-item-open?
+               :on-close close-create-company-item!})
+
+           ($ SimpleSelect {:value selected-item-name
+                            :create-new-label "Create new company item:"
+                            :on-existing-selected on-child-item-selected-wrapper
+                            :on-create-selected on-create-selected-wrapper
+                            :options company-item-options}))))
+
 (defnc SettingsPanel [{:keys [is-settings-open? rli]}]
   (when is-settings-open?
     (let [production-type (-> rli :recipe-line-item/child-item :item/production-type)]
@@ -156,8 +228,6 @@
   (let [;; Local state
         [is-settings-open? is-settings-open-state] (hooks/use-state false)
         [is-showing-children? set-is-showing-children-state] (hooks/use-state true)
-        [is-create-new? set-create-new!] (hooks/use-state {:state :hidden
-                                                           :query nil})
 
         ;; Reducer events
         [state _ builder] (use-item-state)
@@ -170,8 +240,11 @@
 
         ;; Local bindings
         rli-uuid (:recipe-line-item/uuid rli)
-        all-items (:items state)
+        items (:items state)
+        vendors (:vendors state)
+
         child-item (-> rli :recipe-line-item/child-item)
+        company-items (-> child-item :item/company-items)
         item-children (-> rli :recipe-line-item/child-item :item/children)
 
         ;; Derived values
@@ -213,8 +286,6 @@
                                {:uuid rli-uuid
                                 :uom-code uom-code})))]
 
-
-
     (d/div {:class "item-wrapper flex flex-col"}
 
            (d/div {:ref wrapper-container
@@ -234,9 +305,13 @@
 
                                 (d/div {:class "flex items-center justify-between w-full p-2"}
                                        ($ ItemSelector {:rli rli
-                                                        :items all-items
+                                                        :items items
                                                         :on-item-selected on-rli-item-selected
                                                         :on-item-created on-item-created})
+
+                                       ($ CompanyItemSelector {:rli rli
+                                                               :vendors vendors
+                                                               :company-items company-items})
 
                                        ($ QuantityEditorWrapper {:rli rli
                                                                  :is-draft? is-draft?

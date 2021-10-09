@@ -7,7 +7,7 @@
             [cognitect.transit :as t]
             [postmortem.core :as pm]))
 
-(subscribe! :db-updated (fn [& args] #_(tap> args)))
+(subscribe! :db-updated (fn [& args]))
 
 (subscribe! :local-transaction-update (fn [tx-data]
                                         (POST "http://localhost:3000/api/transactor" {:params {:topic :local/tx-data

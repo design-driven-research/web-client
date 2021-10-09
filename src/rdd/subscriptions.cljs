@@ -7,7 +7,3 @@
  :sys/init
  (fn [data]
    (GET "http://localhost:3000/api/custom/initial-data" {:handler db/initial-data->db!})))
-
-
-;; Bootstrap
-(bus/publish! {:topic :sys/init})

@@ -5,9 +5,11 @@
 
             [rdd.db]
             [rdd.services.syncer]
-            [helix.hooks]
             [rdd.subscriptions]
             [rdd.services.store]
+            [rdd.services.event-bus :as eb]
+            [helix.hooks :as hooks]
+            [helix.dom :as d]
             [rdd.views.edit-recipe :as erv]
             [rdd.providers.item-provider :refer [ItemProvider]]
             ["react-dom" :as rdom]
@@ -16,11 +18,9 @@
 (.onlyShowFocusOnTabs FocusStyleManager)
 
 (defnc app []
-  (let [product-name "Wrap"]
-    ($ ItemProvider
-       ($ HotkeysProvider ($ :div
-                             ($ NavBar)
-                             ($ erv/view {:product-name product-name}))))))
+  ($ ItemProvider {:item-name "Wrap"}
+     ($ HotkeysProvider
+        ($ erv/view))))
 
 (defonce root (rdom/createRoot (js/document.getElementById "app")))
 
@@ -33,4 +33,6 @@
   []
   (js/console.log "Calling init")
   (mount/start)
-  (start))
+  (start)
+
+  (eb/publish! {:topic :sys/init}))

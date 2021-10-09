@@ -30,10 +30,12 @@
         context-path (into base-path [::context])
         validations-path (into base-path [::validations])
         touches-path (into base-path [::touches])
+        states-path (into base-path [::states])
 
         context (::context state)
         validations (::validations state)
-        touches (::touches state)]
+        touches (::touches state)
+        states (::states state)]
 
     {:state state
      :base-path base-path
@@ -42,11 +44,13 @@
      :validations validations
      :validations-path validations-path
      :touches-path touches-path
-     :touches touches}))
+     :touches touches
+     :states-path states-path
+     :states states}))
 
 (defn validate-state!
-  [fsm id]
-  (let [{:keys [state validations-path]} (state-info fsm id)
+  [fsm state-id]
+  (let [{:keys [state validations-path]} (state-info fsm state-id)
         fields (::fields state)
         context (::context state)
 
@@ -60,22 +64,41 @@
     (assoc-in fsm validations-path validations)))
 
 (defn update-context-field!
-  [fsm id field-id value]
-  (let [{:keys [context-path]} (state-info fsm id)
+  [fsm state-id field-id value]
+  (let [{:keys [context-path]} (state-info fsm state-id)
         field-path (into context-path [field-id])]
     (-> (assoc-in fsm field-path value)
-        (validate-state! id))))
+        (validate-state! state-id))))
 
 (defn update-context!
-  [fsm id value]
-  (let [{:keys [context-path base-path]} (state-info fsm id)]
+  [fsm state-id value]
+  (let [{:keys [context-path base-path]} (state-info fsm state-id)]
     (-> (assoc-in fsm context-path value)
         (update-in base-path dissoc ::validations))))
 
 (defn touch-field!
-  [fsm id field-id]
-  (let [{:keys [touches-path]} (state-info fsm id)
+  [fsm state-id field-id]
+  (let [{:keys [touches-path]} (state-info fsm state-id)
         touch-path (into touches-path [field-id])]
     (-> (assoc-in fsm touch-path true)
-        (validate-state! id))))
+        (validate-state! state-id))))
+
+(defn swap-child-states!
+  [fsm state-id states]
+  (let [{:keys [states-path]} (state-info fsm state-id)]
+    (-> (assoc-in fsm states-path states)
+        (validate-state! state-id))))
+
+(defn remove-child-states!
+  [fsm state-id]
+  (let [{:keys [base-path]} (state-info fsm state-id)]
+    (-> (update-in fsm base-path dissoc ::states)
+        (validate-state! state-id))))
+
+(defn transition-to-state!
+  [fsm state-id]
+  (let [{:keys [base-path]} (state-info fsm state-id)
+        open-path (into base-path [::open])]
+    (-> (assoc-in fsm open-path true)
+        (assoc ::state state-id))))
 

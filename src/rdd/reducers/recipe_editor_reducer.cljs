@@ -15,11 +15,12 @@
   (store/update-recipe-line-item-quantity! uuid quantity)
   (assoc state :item (store/item->tree current-product-name)))
 
-(defmethod reducer :remote-db-loaded
+(defmethod reducer :refresh!
   [{:as state :keys [current-product-name]} _]
   (assoc state
          :item (store/item->tree current-product-name)
-         :items (store/get-items)))
+         :items (store/get-items)
+         :vendors (store/get-vendors)))
 
 (defmethod reducer :update-recipe-line-item-quantity-uom
   [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid uom-code]}]]

@@ -11,7 +11,7 @@
    value - A scalar
    options - A vector of maps. Each map must include a :title key
    on-existing-selected - Handler called on click or enter of an existing option
-   on-create-selected - Handler called on click or enter of 'Create new'
+   on-create-selected - Handler called on click or enter of 'Create new' - Returns an object with {:type :create :query 'value typed in'}
    create-new-label - The label to display in the create new menu item
 
    Example ($ SimpleSelect {:value 'gr' :options [{:title 'gr'} {:title 'lb'}] :on-selected on-selected-handler})

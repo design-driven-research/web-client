@@ -9,12 +9,8 @@
    
    Example usage for builder: (builder :topic-name-in-reducer [props-to-watch-and-invalidate])
    "
-  [product-name]
-  (let [initial-state {:current-product-name product-name
-                       :item (store/item->tree product-name)
-                       :items (store/get-items)}
-
-        [state dispatch!] (hooks/use-reducer rer/reducer initial-state)
+  [item-name]
+  (let [[state dispatch!] (hooks/use-reducer rer/reducer {:current-product-name item-name})
 
         builder (fn [topic invalidation-keys]
                   (hooks/use-callback
@@ -23,3 +19,9 @@
                      (dispatch! [topic args]))))]
 
     [state dispatch! builder]))
+
+
+;; :current-product-name product-name
+;; :item (store/item->tree product-name)
+;; :vendors (store/get-vendors)
+;; :items (store/get-items)

@@ -86,11 +86,13 @@
           quantity (-> rli :measurement/quantity)
           uom-temp-id (-> rli :measurement/uom :uom/uuid)
           child-temp-id (-> rli :recipe-line-item/item :item/uuid)
+          company-item-temp-id (-> rli :recipe-line-item/company-item :company-item/uuid)
           position (-> rli :meta/position)]
       {:db/id uuid
        :recipe-line-item/uuid uuid
        :meta/position position
        :recipe-line-item/item child-temp-id
+       :recipe-line-item/company-item company-item-temp-id
        :measurement/quantity quantity
        :measurement/uom uom-temp-id})))
 

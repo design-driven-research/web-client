@@ -12,9 +12,10 @@
   []
   (hooks/use-context item-context))
 
-(defnc ItemProvider [{:keys [children]}]
+(defnc ItemProvider [{:keys [item-name
+                             children]}]
   (provider
    {:context item-context
-    :value (use-item-reducer "Wrap")}
+    :value (use-item-reducer item-name)}
    children))
 
