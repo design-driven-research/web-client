@@ -13,7 +13,7 @@
 
         builder (fn [topic invalidation-keys]
                   (hooks/use-callback
-                   invalidation-keys
+                   (or invalidation-keys :once)
                    (fn [args]
                      (dispatch! [topic args]))))]
 

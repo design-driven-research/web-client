@@ -62,8 +62,25 @@
 
     (assoc-in fsm validations-path validations)))
 
+(comment
+
+  (count (pm/log-for :at-updater))
+  (count (pm/log-for :start))
+
+  (nth (pm/log-for :at-updater) 4)
+
+  (nth (pm/log-for :start) 5)
+  ;; 
+  )
+
+
 (defn update-context-field!
   [fsm state-id field-id value]
+  (pm/spy>> :at-updater {:fsm fsm
+                         :state-id state-id
+                         :field-id field-id
+                         :value value})
+
   (let [{:keys [context-path]} (state-info fsm state-id)
         field-path (into context-path [field-id])]
     (-> (assoc-in fsm field-path value)
@@ -87,6 +104,10 @@
   (let [{:keys [states-path]} (state-info fsm state-id)]
     (-> (assoc-in fsm states-path states)
         (validate-state! state-id))))
+
+(defn push-states!
+  [fsm states]
+  (update-in fsm [::states] into states))
 
 (defn remove-child-states!
   [fsm state-id]

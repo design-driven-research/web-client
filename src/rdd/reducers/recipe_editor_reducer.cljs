@@ -20,7 +20,8 @@
   (assoc state
          :item (store/item->tree current-product-name)
          :items (store/get-items)
-         :vendors (store/get-vendors)))
+         :vendors (store/get-vendors)
+         :uoms (store/get-uoms)))
 
 (defmethod reducer :update-recipe-line-item-quantity-uom
   [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid uom-code]}]]
@@ -42,13 +43,6 @@
   (store/create-sibling-recipe-line-item! origin-rli-uuid insert-type)
   (assoc state :item (store/item->tree current-product-name)))
 
-(defmethod reducer :create-nested-recipe-line-item
-  [{:as state :keys [current-product-name]} [_ {:as args :keys [origin-rli-uuid insert-type]}]]
-
-  #_(store/create-recipe-line-item! origin-rli-uuid insert-type)
-  state
-  #_(assoc state :item (store/item->tree current-product-name)))
-
 (defmethod reducer :update-recipe-line-item-item
   [{:as state :keys [current-product-name]} [_ {:as args :keys [rli-uuid item-uuid]}]]
   (store/update-recipe-line-item-item! rli-uuid item-uuid)
@@ -59,6 +53,17 @@
   (store/create-and-link-item! rli-uuid item-name item-type)
   (assoc state :item (store/item->tree current-product-name)))
 
+(defmethod reducer :create-company
+  [state [_ {:keys [name uuid]}]]
+  (store/create-company! {:name name
+                          :uuid uuid})
+  (assoc state :vendors (store/get-vendors)))
 
-
-
+(defmethod reducer :create-uom
+  [state [_ {:keys [name code uuid]}]]
+  (store/create-uom! {:name name
+                      :code code
+                      :uuid uuid
+                      :system :units.system/CUSTOM
+                      :type :units.type/CUSTOM})
+  (assoc state :uoms (store/get-uoms)))

@@ -27,6 +27,7 @@
          [?eid :item/uuid ?uuid]
          [?eid :item/production-type :production.type/ATOM]] (db)))
 
+;; @TODO - Flatten this and update destructing where used
 (defn get-items
   "Get all items"
   []
@@ -34,12 +35,35 @@
          :where
          [?eid :item/uuid ?uuid]] (db)))
 
+;; @TODO - Flatten this and update destructing where used
 (defn get-vendors
   "Get all vendors"
   []
   (d/q '[:find (pull ?eid [*])
          :where
          [?eid :company/uuid ?uuid]] (db)))
+
+(defn get-uoms
+  "Get all uoms"
+  []
+  (-> (d/q '[:find (pull ?eid [*
+                               {:uom/type [*]}
+                               {:uom/system [*]}])
+             :where
+             [?eid :uom/uuid ?uuid]] (db))
+      (flatten)))
+
+(defn get-uom-by-uuid
+  "Get uom by uuid"
+  [uuid]
+  (-> (d/q '[:find [(pull ?eid [*
+                                {:uom/type [*]}
+                                {:uom/system [*]}])]
+             :in $ ?uuid
+             :where
+             [?eid :uom/uuid ?uuid]]
+           (db) uuid)
+      (first)))
 
 (defn get-recipe-line-items
   "Get all recipe line items"
@@ -104,6 +128,16 @@
   [item-uuid]
   (clojure.set/union (get-standard-conversions) (get-custom-conversions item-uuid)))
 
+(defn quantity-in-uom
+  "Convert quantity from one UOM or a different UOM based on the conversions passed in.
+   
+   Example: (quantity-in-uom '1uXwh_BaxU7BaWroGtHXA' 1 'lb' 'gr' vecotr-of-conversions)
+   
+   Returns: {:quantity 5, :from :case, :to :lb, :factor 25, :total 125}"
+  [quantity from to conversions]
+  (let [mapping (uom-converters/generate-conversions-lookup-table conversions)]
+    (uom-converters/quantity-in-uom quantity from to mapping)))
+
 (defn item-quantity-in-uom
   "Convert quantity from one UOM or a different UOM based on the item-uuid passed in.
    
@@ -111,9 +145,40 @@
    
    Returns: {:quantity 5, :from :case, :to :lb, :factor 25, :total 125}"
   [item-uuid quantity from to]
-  (let [conversions (get-conversions-for-item item-uuid)
+  (let [conversions (get-conversions-for-item item-uuid)]
+    (quantity-in-uom quantity from to conversions)))
+
+(defn has-path-from-to?
+  [from to custom-conversions]
+  (let [conversions (clojure.set/union (get-standard-conversions) custom-conversions)
         mapping (uom-converters/generate-conversions-lookup-table conversions)]
-    (uom-converters/quantity-in-uom quantity from to mapping)))
+    (uom-converters/has-path-from-to? from to mapping)))
+
+(defn get-uom-type-info
+  "Gets the type and system information for a uom by uuid 
+   Returns: [type system]"
+  [uom-uuid]
+  (d/q '[:find [?type-ident ?system-ident]
+         :in $ ?uom-uuid
+         :where
+         [?uom :uom/uuid ?uom-uuid]
+         [?uom :uom/type ?type]
+         [?type :db/ident ?type-ident]
+         [?uom :uom/system ?system]
+         [?system :db/ident ?system-ident]]
+       (db)
+       uom-uuid))
+
+(defn is-standard-uoms?
+  "Is the UOM of type standard? Either :units.type/WEIGHT or :units.type/VOLUME"
+  [uom-uuid]
+  (let [[type system] (get-uom-type-info uom-uuid)]
+    (or
+     (= type :units.type/WEIGHT)
+     (= type :units.type/VOLUME))))
+
+(defn has-conversion-path-to-standard-uom?
+  [uom-uuid conversions])
 
 (defn item-quotes
   "Get all quotes for an item based on uuid"
@@ -475,6 +540,21 @@
 (defn update-recipe-line-item-item!
   [rli-uuid item-uuid]
   (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
+
+(defn create-company!
+  [{:keys [name uuid]}]
+  (db-core/transact-from-local! (conn) [[:db/add -1 :company/uuid uuid]
+                                        [:db/add -1 :company/name name]]))
+
+(defn create-uom!
+  [{:keys [name code uuid system type]}]
+  (db-core/transact-from-local! (conn) [[:db/add -1 :uom/uuid uuid]
+                                        [:db/add -1 :uom/name name]
+                                        [:db/add -1 :uom/code code]
+                                        [:db/add -1 :uom/system system]
+                                        [:db/add -1 :uom/type type]]))
+
+#_(create-company! "Hithere")
 
 (defn create-and-link-item!
   [rli-uuid item-name item-type]

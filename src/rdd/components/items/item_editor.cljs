@@ -109,13 +109,17 @@
                             :options options}))))
 
 (defnc CompanyItemSelector [{:keys [rli
+                                    uoms
                                     vendors
                                     company-items
                                     on-item-selected
                                     on-item-created]}]
 
+
   (let [;;  Extracted values
         rli-uuid (:recipe-line-item/uuid rli)
+
+        child-item (-> rli :recipe-line-item/child-item)
 
 
         company-item (-> rli :recipe-line-item/company-item)
@@ -169,7 +173,9 @@
     (d/div {:class "flex w-1/2 items-center"}
 
            ($ CreateNewCompanyItem
-              {:vendors vendors
+              {:item child-item
+               :vendors vendors
+               :uoms uoms
                :is-open? is-create-company-item-open?
                :on-close close-create-company-item!})
 
@@ -242,6 +248,7 @@
         rli-uuid (:recipe-line-item/uuid rli)
         items (:items state)
         vendors (:vendors state)
+        uoms (:uoms state)
 
         child-item (-> rli :recipe-line-item/child-item)
         company-items (-> child-item :item/company-items)
@@ -310,6 +317,7 @@
                                                         :on-item-created on-item-created})
 
                                        ($ CompanyItemSelector {:rli rli
+                                                               :uoms uoms
                                                                :vendors vendors
                                                                :company-items company-items})
 

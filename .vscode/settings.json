@@ -1,3 +1,11 @@
 {
+  "calva.customREPLCommandSnippets": [
+    {
+      "name": "Reset Postmortem",
+      "ns": "user",
+      "repl": "cljs",
+      "snippet": "(reset-postmortem!)"
+    }
+  ],
   "files.exclude": {}
 }

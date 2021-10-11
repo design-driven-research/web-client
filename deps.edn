@@ -1,6 +1,5 @@
 {:paths
- ["dev"
-  "src"
+ ["src"
   "resources"]
  :deps {metosin/tilakone {:git/url "https://github.com/eihli/tilakone.git"
                           :git/sha "25341ca5a60fe85ee0da327b714bbee481f7d52d"}
@@ -29,4 +28,6 @@
 
  :aliases
  {:cljs
-  {:extra-deps  {thheller/shadow-cljs {:mvn/version "2.15.10"}}}}}
+  {:init-ns user
+   :extra-paths ["dev"]
+   :extra-deps  {thheller/shadow-cljs {:mvn/version "2.15.10"}}}}}

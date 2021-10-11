@@ -17,7 +17,6 @@
 
 (defn- unsubscribe!
   [id]
-  (js/console.log "Unsubscribing " id)
   (swap! subscriptions (fn [subs]
                          (filter (fn [sub] (not= (:id sub) id)) subs))))
 

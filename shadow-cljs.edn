@@ -9,6 +9,7 @@
    :modules {:main {:init-fn rdd.core/init!}}
    :release {:compiler-options {:optimizations :advanced}}
    :devtools {:reload-strategy :full
+              :repl-init-ns user
               :preloads [rdd.dev]}}}}
 
 

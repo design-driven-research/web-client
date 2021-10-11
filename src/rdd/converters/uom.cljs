@@ -10,11 +10,11 @@
    
    Required keys for each entry: :from-uom-code :to-uom-code :quantity
    
-   #{{:conversion-uuid 'Nhs-KWvQjyf-D2YMZM7bP', :from-uom-code 'kg', :to-uom-code 'gr', :quantity 1000}
+   '#{{:conversion-uuid 'Nhs-KWvQjyf-D2YMZM7bP', :from-uom-code 'kg', :to-uom-code 'gr', :quantity 1000}
      {:conversion-uuid 'ZqGv_fqNsZw0Zem7F2mLm', :from-uom-code 'gr', :to-uom-code 'gr', :quantity 1}
      {:conversion-uuid 'HrsYuIva9akIEH_0fQiGG', :from-uom-code 'pallet', :to-uom-code 'case', :quantity 50}
      {:conversion-uuid 'OciR1EXFmdsYe075q3szn', :from-uom-code 'lb', :to-uom-code 'gr', :quantity 453.1}
-     {:conversion-uuid '9NpI7YvNXdjqeu9yNM9NT', :from-uom-code 'case', :to-uom-code 'lb', :quantity 25}}
+     {:conversion-uuid '9NpI7YvNXdjqeu9yNM9NT', :from-uom-code 'case', :to-uom-code 'lb', :quantity 25}}'
    
    Returns:
 
@@ -70,3 +70,18 @@
          :to to
          :factor factor
          :total (* quantity factor)}))))
+
+(defn has-path-from-to?
+  "Convert quantity from one UOM or a different UOM based on the conversion passed in.
+   
+   Example: (quantity-in-uom 5 :case :lb conversions)
+   
+   Returns: {:quantity 5, :from :case, :to :lb, :factor 25, :total 125}
+
+   Returns error map if no path is found: {:has-error? true, :error-msg 'No path was found between :case and :lbs'}"
+  [from to mapping]
+  (if (= from to)
+    true
+    (let [graph (g/graph mapping)
+          path (alg/bf-path graph from to)]
+      (boolean path))))

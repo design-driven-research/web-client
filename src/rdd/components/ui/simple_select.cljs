@@ -23,29 +23,32 @@
            on-existing-selected
            on-create-selected]}]
 
-  (let [on-selected-wrapper (fn [val]
-                              (let [option (js->clj val :keywordize-keys true)
-                                    is-create? (= :create (:type option))]
-                                (if is-create?
-                                  (on-create-selected option)
-                                  (on-existing-selected option))))
-        renderer (hooks/use-memo :once (fn [item opts]
-                                         (j/let [^js {:keys [title]} item]
-                                           ($ MenuItem {:onClick #(on-selected-wrapper item)
-                                                        :active (j/get-in opts [:modifiers :active])
-                                                        :key title
-                                                        :text title}))))
+  (let [on-selected-wrapper (hooks/use-callback [on-create-selected
+                                                 on-existing-selected] (fn [val]
+                                                                         (let [option (js->clj val :keywordize-keys true)
+                                                                               is-create? (= :create (:type option))]
+                                                                           (if is-create?
+                                                                             (on-create-selected option)
+                                                                             (on-existing-selected option)))))
+        renderer (hooks/use-memo [on-create-selected
+                                  on-existing-selected] (fn [item opts]
+                                                          (j/let [^js {:keys [title]} item]
+                                                            ($ MenuItem {:onClick #(on-selected-wrapper item)
+                                                                         :active (j/get-in opts [:modifiers :active])
+                                                                         :key title
+                                                                         :text title}))))
 
-        create-new-renderer (hooks/use-memo :once (fn [query opts]
-                                                    ($ MenuItem {:onClick #(on-selected-wrapper
-                                                                            {:type :create
-                                                                             :query query})
-                                                                 :icon "add"
-                                                                 :active opts
-                                                                 :key "new"
-                                                                 :text (if create-new-label
-                                                                         (str create-new-label " " query)
-                                                                         query)})))
+        create-new-renderer (hooks/use-memo [on-create-selected
+                                             on-existing-selected] (fn [query opts]
+                                                                     ($ MenuItem {:onClick #(on-selected-wrapper
+                                                                                             {:type :create
+                                                                                              :query query})
+                                                                                  :icon "add"
+                                                                                  :active opts
+                                                                                  :key "new"
+                                                                                  :text (if create-new-label
+                                                                                          (str create-new-label " " query)
+                                                                                          query)})))
 
         predicate-filter (hooks/use-memo [options] (fn [query option]
                                                      (if (empty? query)
@@ -58,6 +61,7 @@
         create-new-from-query-handler (hooks/use-callback :once (fn [query option]
                                                                   {:type :create
                                                                    :query query}))]
+
 
     ($ :div
        ($ Select {:popoverProps (j/lit {:minimal true})
