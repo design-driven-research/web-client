@@ -59,20 +59,7 @@
                                 acc))
                             {}
                             fields)]
-
     (assoc-in fsm validations-path validations)))
-
-(comment
-
-  (count (pm/log-for :at-updater))
-  (count (pm/log-for :start))
-
-  (nth (pm/log-for :at-updater) 4)
-
-  (nth (pm/log-for :start) 5)
-  ;; 
-  )
-
 
 (defn update-context-field!
   [fsm state-id field-id value]
@@ -122,3 +109,12 @@
     (-> (assoc-in fsm open-path true)
         (assoc ::state state-id))))
 
+
+(defn extract-context
+  [fsm]
+  (->> fsm
+       ::states
+       (reduce (fn [acc state]
+                 (let [key (::id state)
+                       context (::context state)]
+                   (assoc acc key context))) {})))

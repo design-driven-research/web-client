@@ -84,6 +84,7 @@
                          :options uom-options}))
 
      ($ Dialog {:isOpen is-showing-create-uom?
+                :onClose #(set-is-showing-create-uom! false)
                 :title (str "Create new uom")}
         ($ CreateUOMForm {:on-submit on-submit-new-uom-wrapper}))
 

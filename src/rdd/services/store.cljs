@@ -3,6 +3,7 @@
             [datascript.core :as d]
             [nano-id.core :refer [nano-id]]
             [postmortem.core :as pm]
+            [rdd.utils.for-indexed :refer [for-indexed]]
             [rdd.converters.uom :as uom-converters]
             [rdd.db :as db-core]
             [rdd.services.event-bus :as eb]))
@@ -231,30 +232,30 @@
 
 (defn company-items-for-item
   [item-uuid]
-  (d/q '[:find ?item-uuid ?company-item-uuid ?company-item-name ?company-item-description ?company-uuid ?company-name
-         :keys item-uuid company-item-uuid company-item-name company-item-description company-uuid company-name
-         :in $ ?item-uuid
-         :where
-         [?item :item/uuid ?item-uuid]
-         [?company-item :company-item/item ?item]
-         [?company-item :company-item/uuid ?company-item-uuid]
-         [?company-item :company-item/name ?company-item-name]
-         [?company-item :info/description ?company-item-description]
+  (-> (d/q '[:find (pull ?company-item [*
+                                        {:company-item/item [:item/uuid]
+                                         :company-item/quotes [:quote/uuid
+                                                               :currency.usd/cost
+                                                               :measurement/quantity
+                                                               {:measurement/uom [:uom/uuid
+                                                                                  :uom/code]}]
+                                         :uom/conversions [:conversion/uuid
+                                                           {:conversion/from [:uom/uuid
+                                                                              :uom/code]}
+                                                           {:conversion/to [:uom/uuid
+                                                                            :uom/code]}]}])
 
-         [?company :company/company-items ?company-item]
-         [?company :company/uuid ?company-uuid]
-         [?company :company/name ?company-name]]
-       (db)
-       item-uuid))
+             :in $ ?item-uuid
+             :where
+             [?item :item/uuid ?item-uuid]
+             [?company-item :company-item/item ?item]]
+           (db)
+           item-uuid)
+      (flatten)))
 
-(company-items-for-item "9gZsKQ_FDc30zsaTPWtlc")
-;; => #{{:item-uuid "9gZsKQ_FDc30zsaTPWtlc",
-;;       :company-item-uuid "m9wplWlRTwMBWeG4n12C8",
-;;       :company-item-name "Sea Salt, Fine",
-;;       :company-item-description "Sea salt, description",
-;;       :company-uuid "FUvbvz9dqCN5leszxXLka",
-;;       :company-name "ABC Organics"}}
+#_(get-items)
 
+#_(company-items-for-item "AKEiP9wXzG6e_ilaWyHUK")
 
 (defn get-companies
   []
@@ -541,6 +542,11 @@
   [rli-uuid item-uuid]
   (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
 
+
+(defn update-recipe-line-company-item!
+  [rli-uuid company-item-uuid]
+  (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/company-item [:company-item/uuid company-item-uuid]]]))
+
 (defn create-company!
   [{:keys [name uuid]}]
   (db-core/transact-from-local! (conn) [[:db/add -1 :company/uuid uuid]
@@ -563,6 +569,38 @@
                                         [:db/add -1 :item/production-type item-type]
                                         [:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item -1]]))
 
+(defn create-company-item!
+  [request]
+  ;; Create company item
+
+  (let [company-item-tx [[:db/add -1 :company-item/uuid (:company-item/uuid request)]
+                         [:db/add -1 :company-item/name (:company-item/name request)]
+                         [:db/add -1 :company-item/sku (:company-item/sku request)]
+
+                         [:db/add -1 :company-item/item [:item/uuid (:item/uuid request)]]
+
+                         [:db/add -1 :company-item/quotes -2]]
+
+        company-tx [[:db/add [:company/uuid (:company/uuid request)] :company/company-items -1]]
+
+        quote-tx [[:db/add -2 :quote/uuid (nano-id)]
+                  [:db/add -2 :currency.usd/cost (:quote/price request)]
+                  [:db/add -2 :measurement/quantity (:quote/quantity request)]
+                  [:db/add -2 :measurement/uom [:uom/uuid (:quote/uom-uuid request)]]]
+
+        conversions-tx (mapcat
+                        (fn [c] (let [temp-id (nano-id)]
+                                  [[:db/add temp-id :conversion/from [:uom/uuid (:from-uom-uuid c)]]
+                                   [:db/add temp-id :conversion/to [:uom/uuid (:to-uom-uuid c)]]
+                                   [:db/add temp-id :measurement/quantity (:quantity c)]
+                                   [:db/add -1 :uom/conversions temp-id]])) (:conversions request))
+
+        all-tx (concat company-item-tx company-tx quote-tx conversions-tx)]
+
+    (tap> {:all-tx all-tx})
+
+    (db-core/transact-from-local! (conn) all-tx)))
+
 
 (comment
 
@@ -581,6 +619,9 @@
   (item-quotes "1uXwh_BaxU7BaWroGtHXA")
 
   (get-conversions-for-item "1uXwh_BaxU7BaWroGtHXA")
+
+  (map [[[1] 2 3] [1 2 3]])
+
 
   ;; 
   )

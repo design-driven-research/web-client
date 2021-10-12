@@ -21,7 +21,7 @@
 (defn company-item-schema
   []
   {:company-item/uuid {:db/unique :db.unique/identity}
-   :company-item/sky {:db/unique :db.unique/identity}
+   :company-item/sku {:db/unique :db.unique/identity}
    :company-item/item {:db/valueType :db.type/ref
                        :db/cardinality :db.cardinality/one}
    :company-item/quotes {:db/valueType :db.type/ref

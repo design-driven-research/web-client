@@ -8,12 +8,14 @@
             [rdd.hooks.use-hover :refer [use-hover]]
             [helix.hooks :as hooks]
             [applied-science.js-interop :as j]
+            [rdd.components.dropdowns.item-selector :refer [ItemSelector]]
+            [rdd.components.dropdowns.company-item-selector :refer [CompanyItemSelector]]
             [rdd.components.dialogs.create-item-dialog :refer [CreateNewIngredientDialog]]
             [rdd.components.ui.simple-select :refer [SimpleSelect]]
             [rdd.components.menus.add-row-menu :refer [AddRowMenu]]
             [rdd.components.settings.atomic-item-settings :refer [AtomicItemSettings]]
             [rdd.components.settings.composite-item-settings :refer [CompositeItemSettings]]
-            [rdd.components.forms.create-company-item :refer [CreateNewCompanyItem]]
+            [rdd.components.forms.create-company-item-form :refer [CreateNewCompanyItemForm]]
             [rdd.components.ui.quantity-editor :refer [QuantityEditor]]
             [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.utils.for-indexed :refer [for-indexed]]))
@@ -46,144 +48,9 @@
            ($ Button {:icon "chevron-right"
                       :minimal true}))))
 
-(defnc ItemSelector [{:keys [rli
-                             items
-                             on-item-selected
-                             on-item-created]}]
-  (let [;;  Extracted values
-        rli-uuid (:recipe-line-item/uuid rli)
-        selected-item-name (-> rli :recipe-line-item/child-item :item/name)
-        selected-item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
-
-        ;; Local state
-        [create-item-state set-create-item-state!] (hooks/use-state {:current-state :empty})
-
-        ;;  Derived values
-        options (map (fn [[i]] {:title (:item/name i)
-                                :item-uuid (:item/uuid i)}) items)
-
-        is-open? (= :creating (:current-state create-item-state))
-
-        ;;  Callbacks
-        on-child-item-selected-wrapper (hooks/use-callback
-                                        :once
-                                        (fn
-                                          [{:as args
-                                            :keys [item-uuid]}]
-                                          (on-item-selected
-                                           {:rli-uuid rli-uuid
-                                            :item-uuid item-uuid})))
-
-        handle-create-item-submit (hooks/use-callback
-                                   :once
-                                   (fn
-                                     [{:keys [item-name item-type]}]
-                                     (on-item-created
-                                      {:rli-uuid rli-uuid
-                                       :item-name item-name
-                                       :item-type item-type})
-                                     (set-create-item-state!
-                                      {:current-state :empty
-                                       :value nil})))
-
-        on-create-selected-wrapper (hooks/use-callback
-                                    :once
-                                    (fn
-                                      [{:as args
-                                        :keys [query]}]
-                                      (set-create-item-state!
-                                       {:current-state :creating
-                                        :value query})))]
-
-    (d/div {:class "flex w-1/2 items-center"}
-
-           ($ CreateNewIngredientDialog
-              {:is-open? is-open?
-               :start-value (:value create-item-state)
-               :handle-create-item-submit handle-create-item-submit})
-
-           ($ SimpleSelect {:value selected-item-name
-                            :create-new-label "Create new item:"
-                            :on-existing-selected on-child-item-selected-wrapper
-                            :on-create-selected on-create-selected-wrapper
-                            :options options}))))
-
-(defnc CompanyItemSelector [{:keys [rli
-                                    uoms
-                                    vendors
-                                    company-items
-                                    on-item-selected
-                                    on-item-created]}]
 
 
-  (let [;;  Extracted values
-        rli-uuid (:recipe-line-item/uuid rli)
 
-        child-item (-> rli :recipe-line-item/child-item)
-
-
-        company-item (-> rli :recipe-line-item/company-item)
-        selected-item-name (str (:company-item/name company-item))
-
-        ;; Local state
-        [create-company-item-state set-create-company-item-state!] (hooks/use-state {:current-state :empty})
-
-        ;;  Derived values
-        company-item-options (map (fn [i] {:title (str (:company-name i) "-" (:company-item-description i))
-                                           :company-item-uuid (:company-item-uuid i)}) company-items)
-
-        is-create-company-item-open? (= :creating (:current-state create-company-item-state))
-
-        close-create-company-item! (hooks/use-callback :once (fn []
-                                                               (set-create-company-item-state!
-                                                                {:current-state :empty
-                                                                 :value nil})))
-
-        ;;  Callbacks
-        on-child-item-selected-wrapper (hooks/use-callback
-                                        :once
-                                        (fn
-                                          [{:as args
-                                            :keys [item-uuid]}]
-                                          (on-item-selected
-                                           {:rli-uuid rli-uuid
-                                            :item-uuid item-uuid})))
-
-        handle-create-item-submit (hooks/use-callback
-                                   :once
-                                   (fn
-                                     [{:keys [item-name item-type]}]
-                                     (on-item-created
-                                      {:rli-uuid rli-uuid
-                                       :item-name item-name
-                                       :item-type item-type})
-                                     (set-create-company-item-state!
-                                      {:current-state :empty
-                                       :value nil})))
-
-        on-create-selected-wrapper (hooks/use-callback
-                                    :once
-                                    (fn
-                                      [{:as args
-                                        :keys [query]}]
-                                      (set-create-company-item-state!
-                                       {:current-state :creating
-                                        :value query})))]
-
-    (d/div {:class "flex w-1/2 items-center"}
-
-           ($ CreateNewCompanyItem
-              {:item child-item
-               :vendors vendors
-               :uoms uoms
-               :is-open? is-create-company-item-open?
-               :on-close close-create-company-item!})
-
-           ($ SimpleSelect {:value selected-item-name
-                            :create-new-label "Create new company item:"
-                            :on-existing-selected on-child-item-selected-wrapper
-                            :on-create-selected on-create-selected-wrapper
-                            :options company-item-options}))))
 
 (defnc SettingsPanel [{:keys [is-settings-open? rli]}]
   (when is-settings-open?
@@ -244,6 +111,9 @@
         on-rli-item-selected (builder :update-recipe-line-item-item :once)
         on-item-created (builder :create-and-link-item :once)
 
+        on-company-item-selected (builder :update-recipe-line-company-item :once)
+
+
         ;; Local bindings
         rli-uuid (:recipe-line-item/uuid rli)
         items (:items state)
@@ -291,7 +161,15 @@
                             (fn [{:keys [uom-code]}]
                               (recipe-line-item-quantity-uom-selected-handler
                                {:uuid rli-uuid
-                                :uom-code uom-code})))]
+                                :uom-code uom-code})))
+
+
+        on-company-item-selected-wrapper (hooks/use-callback
+                                          [rli-uuid]
+                                          (fn [rli-uuid company-item-uuid]
+                                            (on-company-item-selected
+                                             {:rli-uuid rli-uuid
+                                              :company-item-uuid company-item-uuid})))]
 
     (d/div {:class "item-wrapper flex flex-col"}
 
@@ -319,6 +197,7 @@
                                        ($ CompanyItemSelector {:rli rli
                                                                :uoms uoms
                                                                :vendors vendors
+                                                               :on-selected (partial on-company-item-selected-wrapper rli-uuid)
                                                                :company-items company-items})
 
                                        ($ QuantityEditorWrapper {:rli rli

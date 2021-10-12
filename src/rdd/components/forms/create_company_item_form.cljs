@@ -1,13 +1,16 @@
-(ns rdd.components.forms.create-company-item
+(ns rdd.components.forms.create-company-item-form
   (:require ["@blueprintjs/core" :refer [Dialog]]
             [bangfe.infinite :as bi]
             [helix.core :refer [$]]
+            [nano-id.core :refer [nano-id]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [postmortem.core :as pm]
+            [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.components.forms.company-item.edit-company-item-form :refer [EditCompanyItemForm]]
             [rdd.components.forms.company-item.edit-company-item-pricing-form :refer [EditCompanyItemPricingForm]]
             [rdd.components.forms.create-new-vendor-form :refer [CreateVendorForm]]
+            [rdd.components.forms.company-item.review-form :refer [ReviewForm]]
             [rdd.components.forms.select-vendor-form :refer [SelectVendorForm]]
             [rdd.components.forms.company-item.edit-company-item-usage-form :refer [EditCompanyItemUsageForm]]
             [rdd.components.forms.create-conversions-form :refer [CreateConversionsForm]]
@@ -38,18 +41,25 @@
 
                                   {::bi/id :edit-usage
                                    ::bi/fields []
-                                   :label "Edit usage"}]
+                                   :label "Edit usage"}
+
+                                  {::bi/id :review
+                                   ::bi/fields []
+                                   :label "Review"}]
                      ::bi/state  :select-vendor})
 
 #_(bi/generate-lookup-paths default-states)
 
-(defnc CreateNewCompanyItem
+(defnc CreateNewCompanyItemForm
   [{:keys [item
            vendors
            uoms
            is-open?
+           on-submit
            on-close]}]
   (let [;; Local state
+        [_ _ builder] (use-item-state)
+
         [fsm set-fsm!] (hooks/use-state default-states)
 
         ;; Extracted values
@@ -90,16 +100,53 @@
 
                                                           usage-uom (store/get-uom-by-uuid usage-uom-uuid)
                                                           purchase-uom (store/get-uom-by-uuid pricing-uom-uuid)
-                                                          needs-conversions? (not (store/has-path-from-to? usage-uom purchase-uom []))]
+                                                          needs-conversions? (not (store/has-path-from-to? (:uom/code usage-uom) (:uom/code purchase-uom) []))]
 
                                                       (if needs-conversions?
                                                         (let [updated (-> (bi/push-states! fsm [{::bi/id :add-conversions
                                                                                                  :label "Add conversions"}])
                                                                           (bi/transition-to-state! :add-conversions))]
                                                           (set-fsm! updated))
-                                                        (js/console.log "Submit final"))
+                                                        (set-fsm! (bi/transition-to-state! fsm :review))))))
 
-                                                      #_(set-fsm! updated))))]
+        on-submit-conversions (hooks/use-callback [fsm] (fn [conversions]
+                                                          (let [updated (-> (bi/update-context-field! fsm :add-conversions :conversions conversions)
+                                                                            (bi/transition-to-state! :review))]
+                                                            (set-fsm! updated))))
+
+        create-company-item (builder :create-company-item [fsm])
+        on-submit-wrapper (hooks/use-callback [fsm] (fn []
+                                                      (let [company-item-uuid (nano-id)
+                                                            extracted-context (bi/extract-context fsm)
+
+                                                            company-uuid (-> extracted-context :select-vendor :company/uuid)
+                                                            company-item-name (-> extracted-context :edit-info :company-item/name)
+                                                            company-item-sku (-> extracted-context :edit-info :company-item/sku)
+                                                            quote-price (-> extracted-context :edit-pricing :currency.usd/cost)
+                                                            quote-quantity (-> extracted-context :edit-pricing :measurement/quantity)
+                                                            quote-uom-uuid (-> extracted-context :edit-pricing :uom/uuid)
+                                                            usage-uom-uuid (-> extracted-context :edit-usage :uom/uuid)
+
+                                                            item-uuid (:item/uuid item)
+
+                                                            conversions (map (fn [c]
+                                                                               {:quantity (:measurement/quantity c)
+                                                                                :from-uom-uuid (-> c :from :uom/uuid)
+                                                                                :to-uom-uuid (-> c :to :uom/uuid)}) (-> extracted-context :add-conversions :conversions))
+                                                            payload {:company/uuid company-uuid
+                                                                     :company-item/uuid company-item-uuid
+                                                                     :company-item/name company-item-name
+                                                                     :company-item/sku company-item-sku
+                                                                     :quote/price quote-price
+                                                                     :quote/quantity quote-quantity
+                                                                     :quote/uom-uuid quote-uom-uuid
+                                                                     :usage-uom-uuid usage-uom-uuid
+                                                                     :item/uuid item-uuid
+                                                                     :conversions conversions}]
+
+                                                        (create-company-item payload)
+
+                                                        (on-submit {:uuid company-item-uuid}))))]
 
     ($ Dialog {:style (clj->js {:paddingBottom "0"
                                 :minWidth "800px"})
@@ -142,12 +189,27 @@
                                                                         :on-touch (partial on-touch :edit-usage)
                                                                         :on-submit on-submit-usage
                                                                         :on-field-change (partial on-field-change :edit-usage)})
-                               :add-conversions ($ CreateConversionsForm
-                                                   {:state-info state-info
-                                                    :uoms uoms
-                                                    :on-touch (partial on-touch :add-conversions)
-                                                    :on-submit on-submit-usage
-                                                    :on-field-change (partial on-field-change :add-conversions)})
+                               :add-conversions (let [pricing-state (bi/state-info fsm :edit-pricing)
+                                                      pricing-context (:context pricing-state)
+                                                      pricing-uom-uuid (:uom/uuid pricing-context)
+
+                                                      usage-state (bi/state-info fsm :edit-usage)
+                                                      usage-context (:context usage-state)
+                                                      usage-uom-uuid (:uom/uuid usage-context)
+
+                                                      usage-uom (store/get-uom-by-uuid usage-uom-uuid)
+                                                      purchase-uom (store/get-uom-by-uuid pricing-uom-uuid)]
+
+                                                  ($ CreateConversionsForm
+                                                     {:state-info state-info
+                                                      :uoms uoms
+                                                      :from-uom purchase-uom
+                                                      :to-uom usage-uom
+                                                      :on-touch (partial on-touch :add-conversions)
+                                                      :on-submit on-submit-conversions
+                                                      :on-field-change (partial on-field-change :add-conversions)}))
+
+                               :review ($ ReviewForm {:on-submit on-submit-wrapper})
 
                               ;;  Default branch
                                (d/div "No form found"))))
@@ -155,16 +217,3 @@
                     ;;  Footer
                      (d/div {:class (get-class :MULTISTEP_DIALOG_FOOTER)}
                             (d/div {:class "bp3-dialog-footer-actions"} "hey")))))))
-
-
-;; :default
-;; :selected-vendor
-;; :selected-vendor.create
-;; :edit-info
-
-;; :edit-pricing
-;; :edit-usage
-;; :edit-usage.create-uom
-;; :edit-conversions
-;; :edit-conversions.create-uom
-;; :finalalize

@@ -67,3 +67,19 @@
                       :system :units.system/CUSTOM
                       :type :units.type/CUSTOM})
   (assoc state :uoms (store/get-uoms)))
+
+(defmethod reducer :create-company-item
+  [{:as state :keys [current-product-name]} [_ req]]
+
+  (store/create-company-item! req)
+
+  (assoc state :item (store/item->tree current-product-name)))
+
+(defmethod reducer :update-recipe-line-company-item
+  [{:as state :keys [current-product-name]} [_ {:keys [rli-uuid company-item-uuid]}]]
+  (tap> {:rli-uuid rli-uuid
+         :company-item-uuid company-item-uuid})
+
+  (store/update-recipe-line-company-item! rli-uuid company-item-uuid)
+
+  (assoc state :item (store/item->tree current-product-name)))
