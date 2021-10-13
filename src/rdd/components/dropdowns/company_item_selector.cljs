@@ -40,19 +40,16 @@
                              (fn
                                [{:as args
                                  :keys [uuid]}]
-                               (js/console.log uuid)
                                (on-selected uuid)))
 
         on-create-submit (hooks/use-callback
                           :once
                           (fn
                             [{:keys [uuid]}]
-                            (js/console.log uuid)
-                            (js/setTimeout (fn []
-                                             (on-selected uuid)
-                                             (set-create-company-item-state!
-                                              {:current-state :empty
-                                               :value nil})) 2000)))
+                            (on-selected uuid)
+                            (set-create-company-item-state!
+                             {:current-state :empty
+                              :value nil})))
 
         on-create-selected-wrapper (hooks/use-callback
                                     :once

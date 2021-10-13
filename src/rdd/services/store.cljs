@@ -23,7 +23,6 @@
 (defn get-atomic-items
   []
   (d/q '[:find (pull ?eid [*])
-
          :where
          [?eid :item/uuid ?uuid]
          [?eid :item/production-type :production.type/ATOM]] (db)))
@@ -178,9 +177,6 @@
      (= type :units.type/WEIGHT)
      (= type :units.type/VOLUME))))
 
-(defn has-conversion-path-to-standard-uom?
-  [uom-uuid conversions])
-
 (defn item-quotes
   "Get all quotes for an item based on uuid"
   [item-uuid]
@@ -219,17 +215,6 @@
           nil
           converted-cost)))))
 
-#_(defn company-items-for-item
-    [item-uuid]
-    (d/q '[:find (pull ?company-item [* {:company/_company-items [:company/uuid :company/name]
-                                         :company-item/item [:item/uuid]}])
-           :in $ ?item-uuid
-           :where
-           [?item :item/uuid ?item-uuid]
-           [?company-item :company-item/item ?item]]
-         (db)
-         item-uuid))
-
 (defn company-items-for-item
   [item-uuid]
   (-> (d/q '[:find (pull ?company-item [*
@@ -252,10 +237,6 @@
            (db)
            item-uuid)
       (flatten)))
-
-#_(get-items)
-
-#_(company-items-for-item "AKEiP9wXzG6e_ilaWyHUK")
 
 (defn get-companies
   []
@@ -350,17 +331,6 @@
       (and is-item? has-children?) (build-item e)
       is-recipe-line-item? (build-recipe-line-item e)
       :else (build-base-item e))))
-;; => #'rdd.services.store/item->tree'
-
-#_(pm/logs)
-#_(pm/reset!)
-  ;; => {:rli-ci [nil nil nil nil nil nil nil nil nil]}
-
-
-
-#_#_(pm/logs)
-
-  (pm/reset!)
 
 (defn item->tree
   [name]
@@ -537,7 +507,6 @@
                                           [:db/add -1 :meta/position next-position]
                                           [:db/add [:item/uuid parent-item-uuid] :composite/contains -1]])))
 
-
 (defn update-recipe-line-item-item!
   [rli-uuid item-uuid]
   (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
@@ -560,8 +529,6 @@
                                         [:db/add -1 :uom/system system]
                                         [:db/add -1 :uom/type type]]))
 
-#_(create-company! "Hithere")
-
 (defn create-and-link-item!
   [rli-uuid item-name item-type]
   (db-core/transact-from-local! (conn) [[:db/add -1 :item/uuid (nano-id)]
@@ -571,8 +538,6 @@
 
 (defn create-company-item!
   [request]
-  ;; Create company item
-
   (let [company-item-tx [[:db/add -1 :company-item/uuid (:company-item/uuid request)]
                          [:db/add -1 :company-item/name (:company-item/name request)]
                          [:db/add -1 :company-item/sku (:company-item/sku request)]
@@ -596,8 +561,6 @@
                                    [:db/add -1 :uom/conversions temp-id]])) (:conversions request))
 
         all-tx (concat company-item-tx company-tx quote-tx conversions-tx)]
-
-    (tap> {:all-tx all-tx})
 
     (db-core/transact-from-local! (conn) all-tx)))
 

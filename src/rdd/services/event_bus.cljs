@@ -58,27 +58,3 @@
   "Publish a payload, {:topic :db-updated :data {}}"
   [data]
   (put! @bus data))
-
-#_(publish {:topic "yes"
-            :data {:id 10}})
-
-#_(reset! subscriptions [])
-#_@subscriptions
-
-#_(subscribe "yes" (fn [data] (js/console.log "Call back baby!")))
-
-(comment
-
-  (last (pm/log-for :data))
-  ;; => {:topic :update/recipe-line-item-quantity, :data {:quantity 6, :uuid "nAU90hTKBemrhrrD85Qu-"}}
-
-
-
-
-  (def hey (subscribe! :test (fn [] (js/console.log "Called"))))
-
-  (publish! {:topic :test})
-
-  (hey)
-  ;; 
-  )

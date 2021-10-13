@@ -6,6 +6,7 @@
             [helix.dom :as d]
             [helix.hooks :as hooks]
             [postmortem.core :as pm]
+            [rdd.hooks.use-fsm :refer [use-fsm]]
             [rdd.providers.item-provider :refer [use-item-state]]
             [rdd.components.forms.company-item.edit-company-item-form :refer [EditCompanyItemForm]]
             [rdd.components.forms.company-item.edit-company-item-pricing-form :refer [EditCompanyItemPricingForm]]
@@ -48,8 +49,6 @@
                                    :label "Review"}]
                      ::bi/state  :select-vendor})
 
-#_(bi/generate-lookup-paths default-states)
-
 (defnc CreateNewCompanyItemForm
   [{:keys [item
            vendors
@@ -60,34 +59,14 @@
   (let [;; Local state
         [_ _ builder] (use-item-state)
 
-        [fsm set-fsm!] (hooks/use-state default-states)
-
-        ;; Extracted values
-        states (::bi/states fsm)
-        current-state-id (::bi/state fsm)
-
-        ;; Derived values
-        state-info (bi/state-info fsm current-state-id)
-
-        ;; Callbacks
-        on-field-change (hooks/use-callback [fsm] (fn [state-id field-id value]
-                                                    (let [updated (bi/update-context-field! fsm state-id field-id value)]
-                                                      (set-fsm! updated))))
-
-        transition-to (hooks/use-callback [fsm] (fn [state-id]
-                                                  (set-fsm! (bi/transition-to-state! fsm state-id))))
-
-        on-touch (hooks/use-callback [fsm] (fn [state-id field-id]
-                                             (let [touched (bi/touch-field! fsm state-id field-id)]
-                                               (set-fsm! touched))))
-
-        on-select-vendor (hooks/use-callback [fsm] (fn [state-id uuid]
-                                                     (let [updated (-> (bi/update-context-field! fsm state-id :company/uuid uuid))]
-                                                       (set-fsm! updated))))
-
-        on-menu-item-clicked (hooks/use-callback [fsm] (fn [state-id]
-                                                         (let [updated (bi/transition-to-state! fsm state-id)]
-                                                           (set-fsm! updated))))
+        {:keys [fsm
+                set-fsm!
+                states
+                current-state-id
+                state-info
+                on-field-change
+                transition-to
+                on-touch]} (use-fsm default-states)
 
         on-submit-usage (hooks/use-callback [fsm] (fn []
                                                     (let [pricing-state (bi/state-info fsm :edit-pricing)
@@ -156,7 +135,7 @@
        (d/div {:class (get-class :MULTISTEP_DIALOG_PANELS)}
               ($ MultiStepFormMenu {:current-state-id current-state-id
                                     :states states
-                                    :on-click on-menu-item-clicked})
+                                    :on-click transition-to})
               (d/div {:class (get-class :MULTISTEP_DIALOG_RIGHT_PANEL)}
                      (d/div {:class "bp3-dialog-body"}
                             (d/div
@@ -165,8 +144,7 @@
                                                                    :vendors vendors
                                                                    :on-touch (partial on-touch :select-vendor)
                                                                    :on-submit (partial transition-to :edit-info)
-                                                                   :on-field-change (partial on-field-change :select-vendor)
-                                                                   :on-select-vendor (partial on-select-vendor :select-vendor)})
+                                                                   :on-field-change (partial on-field-change :select-vendor)})
 
                                :create-vendor ($ CreateVendorForm {:state-info state-info
                                                                    :on-touch (partial on-touch :create-vendor)
