@@ -1,6 +1,6 @@
 (ns rdd.hooks.use-item-reducer
   (:require [helix.hooks :as hooks]
-            [rdd.reducers.recipe-editor-reducer :as rer]))
+            [rdd.reducers.api :refer [item-editor-reducer]]))
 
 (defn use-item-reducer
   "Use the item reducer. This provides the recipe editor reducer along with a helper function 'builer' 
@@ -9,7 +9,7 @@
    Example usage for builder: (builder :topic-name-in-reducer [props-to-watch-and-invalidate])
    "
   [item-name]
-  (let [[state dispatch!] (hooks/use-reducer rer/reducer {:current-product-name item-name})
+  (let [[state dispatch!] (hooks/use-reducer item-editor-reducer {:current-product-name item-name})
 
         builder (fn [topic invalidation-keys]
                   (hooks/use-callback

@@ -3,7 +3,7 @@
             [rdd.lib.defnc :refer [defnc]]
             [mount.core :as mount]
             [rdd.components.menus.header :refer [NavBar]]
-
+            [rdd.reducers.requires]
             [rdd.db]
             [rdd.services.syncer]
             [rdd.subscriptions]

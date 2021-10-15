@@ -349,14 +349,9 @@
                            0)
         has-recipe-line-item-uuid? recipe-line-item-uuid]
 
-
     (when has-recipe-line-item-uuid?
       (let [tx (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
             new-db (:db-after tx)]
-
-        #_(eb/publish! {:topic :update/recipe-line-item
-                        :data {:quantity prepped-quantity
-                               :uuid recipe-line-item-uuid}})
         new-db))))
 
 (defn update-item-yield!
@@ -515,6 +510,10 @@
 (defn update-recipe-line-company-item!
   [rli-uuid company-item-uuid]
   (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/company-item [:company-item/uuid company-item-uuid]]]))
+
+(defn delete-recipe-line-item!
+  [uuid]
+  (db-core/transact-from-local! (conn) [[:db/retractEntity [:recipe-line-item/uuid uuid]]]))
 
 (defn create-company!
   [{:keys [name uuid]}]

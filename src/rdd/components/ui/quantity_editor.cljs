@@ -26,20 +26,21 @@
 
     (hooks/use-effect [qty] (set-local-qty! qty))
 
-    (d/div {:class "item-quantity flex items-center"}
-           (d/div {:class "flex items-center"}
-                  (d/span {:class "mr-4"} label)
+    (d/div {:class "flex items-center"}
+           (d/span {:class "mr-4"} label)
+           (d/div {:class " w-7/12"}
                   ($ NumericInput {:value local-qty
                                    :allowNumericCharactersOnly false
                                    :clampValueOnBlur true
+                                   :fill true
                                    :minorStepSize 0.01
                                    :min 0
                                    :small true
-                                   :onValueChange on-local-qty-changed})
+                                   :onValueChange on-local-qty-changed}))
 
-                  (d/div {:class "ml-2"}
-                         ($ SimpleSelect {:value uom-code
-                                          :on-existing-selected #(on-uom-changed {:uom-code (:uom-code %)})
-                                          :options options}))))))
+           (d/div {:class "ml-2 w-3/12"}
+                  ($ SimpleSelect {:value uom-code
+                                   :on-existing-selected #(on-uom-changed {:uom-code (:uom-code %)})
+                                   :options options})))))
 
 

@@ -1,24 +1,19 @@
 (ns rdd.components.items.item-editor
   (:require ["@blueprintjs/core" :refer [Button]]
             [helix.core :refer [$]]
-            [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
-            ["react" :as react]
-            [postmortem.core :as pm]
-            [rdd.hooks.use-hover :refer [use-hover]]
             [helix.hooks :as hooks]
-            [applied-science.js-interop :as j]
-            [rdd.components.dropdowns.item-selector :refer [ItemSelector]]
             [rdd.components.dropdowns.company-item-selector :refer [CompanyItemSelector]]
-            [rdd.components.dialogs.create-item-dialog :refer [CreateNewIngredientDialog]]
-            [rdd.components.ui.simple-select :refer [SimpleSelect]]
+            [rdd.components.dropdowns.item-selector :refer [ItemSelector]]
             [rdd.components.menus.add-row-menu :refer [AddRowMenu]]
             [rdd.components.settings.atomic-item-settings :refer [AtomicItemSettings]]
             [rdd.components.settings.composite-item-settings :refer [CompositeItemSettings]]
-            [rdd.components.forms.create-company-item-form :refer [CreateNewCompanyItemForm]]
             [rdd.components.ui.quantity-editor :refer [QuantityEditor]]
+            [rdd.hooks.use-hover :refer [use-hover]]
+            [rdd.lib.defnc :refer [defnc]]
             [rdd.providers.item-provider :refer [use-item-state]]
-            [rdd.utils.for-indexed :refer [for-indexed]]))
+            [rdd.utils.for-indexed :refer [for-indexed]]
+            ["react" :as react]))
 
 (declare RecipeLineItem)
 
@@ -48,10 +43,6 @@
            ($ Button {:icon "chevron-right"
                       :minimal true}))))
 
-
-
-
-
 (defnc SettingsPanel [{:keys [is-settings-open? rli]}]
   (when is-settings-open?
     (let [production-type (-> rli :recipe-line-item/child-item :item/production-type)]
@@ -61,20 +52,22 @@
         :else (d/div "No matching production type found")))))
 
 (defnc QuantityEditorWrapper [{:keys [rli
+                                      uoms
                                       is-draft?
                                       update-quantity-handler
                                       update-uom-handler]}]
 
   (let [quantity (or (:recipe-line-item/quantity rli)
-                     0)]
+                     0)
+        options (map (fn [{:uom/keys [code uuid]}]
+                       {:title code
+                        :uom-code code
+                        :uuid uuid}) uoms)]
     (when (not is-draft?)
       ($ QuantityEditor {:label "Qty"
                          :qty quantity
                          :uom-code (:recipe-line-item/quantity-uom rli)
-                         :options [{:title "gr"
-                                    :uom-code "gr"}
-                                   {:title "lb"
-                                    :uom-code "lb"}]
+                         :options options
                          :on-quantity-changed update-quantity-handler
                          :on-uom-changed update-uom-handler}))))
 
@@ -112,6 +105,7 @@
         on-item-created (builder :create-and-link-item :once)
 
         on-company-item-selected (builder :update-recipe-line-company-item :once)
+        on-delete-recipe-line-item (builder :delete-recipe-line-item :once)
 
 
         ;; Local bindings
@@ -174,7 +168,7 @@
     (d/div {:class "item-wrapper flex flex-col"}
 
            (d/div {:ref wrapper-container
-                   :class "item-header-wrapper align-center justify-center items-center flex w-full mt-2 "}
+                   :class "item-header-wrapper align-center justify-center items-center flex mt-2"}
 
                   ($ HoverMenu {:wrapper-container wrapper-container
                                 :on-add-row-below on-add-row-below
@@ -182,34 +176,43 @@
 
                   (d/div {:class "flex flex-col w-full border"}
 
-                         (d/div {:class "flex items-center justify-between w-full p-2"}
+                         (d/div {:class "flex items-center justify-between p-2"}
 
                                 (when has-children?
                                   ($ ChildToggleNav {:is-showing-children? is-showing-children?
                                                      :set-is-showing-children-state set-is-showing-children-state}))
 
-                                (d/div {:class "flex items-center justify-between w-full p-2"}
-                                       ($ ItemSelector {:rli rli
-                                                        :items items
-                                                        :on-item-selected on-rli-item-selected
-                                                        :on-item-created on-item-created})
+                                (d/div {:class "flex items-center justify-between w-full justify-between p-2"}
+                                       (d/div {:class "flex items-center w-9/12"}
+                                              (d/div {:class "w-4/12"}
+                                                     ($ ItemSelector {:rli rli
+                                                                      :items items
+                                                                      :on-item-selected on-rli-item-selected
+                                                                      :on-item-created on-item-created}))
 
-                                       ($ CompanyItemSelector {:rli rli
-                                                               :uoms uoms
-                                                               :vendors vendors
-                                                               :on-selected (partial on-company-item-selected-wrapper rli-uuid)
-                                                               :company-items company-items})
+                                              (d/div {:class "w-8/12"}
+                                                     ($ CompanyItemSelector {:rli rli
+                                                                             :uoms uoms
+                                                                             :vendors vendors
+                                                                             :on-selected (partial on-company-item-selected-wrapper rli-uuid)
+                                                                             :company-items company-items})))
 
-                                       ($ QuantityEditorWrapper {:rli rli
-                                                                 :is-draft? is-draft?
-                                                                 :update-quantity-handler update-quantity-handler
-                                                                 :update-uom-handler update-uom-handler}))
+                                       (d/div {:class "w-3/12 "}
+                                              ($ QuantityEditorWrapper {:rli rli
+                                                                        :uoms uoms
+                                                                        :is-draft? is-draft?
+                                                                        :update-quantity-handler update-quantity-handler
+                                                                        :update-uom-handler update-uom-handler})))
 
                                 ($ SettingsToggleButton {:is-settings-open-state is-settings-open-state
                                                          :is-settings-open? is-settings-open?}))
 
-                         ($ SettingsPanel {:is-settings-open? is-settings-open?
-                                           :rli rli})))
+                         (d/div {:class "flex"}
+                                ($ SettingsPanel {:is-settings-open? is-settings-open?
+                                                  :rli rli})
+                                ($ Button {:onClick (fn []
+                                                      (on-delete-recipe-line-item rli-uuid))
+                                           :text "x"}))))
 
            (when (and has-children?
                       is-showing-children?)

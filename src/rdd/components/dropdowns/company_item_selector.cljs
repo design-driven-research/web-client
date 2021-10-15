@@ -60,7 +60,7 @@
                                        {:current-state :creating
                                         :value query})))]
 
-    (d/div {:class "flex w-1/2 items-center"}
+    (d/div {:class "flex items-center"}
            ($ CreateNewCompanyItemForm
               {:item child-item
                :vendors vendors

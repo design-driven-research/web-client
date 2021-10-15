@@ -2,6 +2,7 @@
   (:require ["@blueprintjs/core" :refer [Button MenuItem]]
             ["@blueprintjs/select" :refer [Select]]
             [clojure.string :as s]
+            [helix.dom :as d]
             [applied-science.js-interop :as j]
             [helix.core :refer [$]]
             [rdd.lib.defnc :refer [defnc]]
@@ -63,15 +64,15 @@
                                                                    :query query}))]
 
 
-    ($ :div
-       ($ Select {:popoverProps (j/lit {:minimal true})
-                  :createNewItemFromQuery create-new-from-query-handler
-                  :createNewItemRenderer create-new-renderer
-                  :itemRenderer renderer
-                  :itemPredicate predicate-filter
-                  :onItemSelect #(on-selected-wrapper %)
-                  :items (clj->js options)}
-          ($ Button {:text value
-                     :small true
-                     :minimal true
-                     :rightIcon "chevron-down"})))))
+    (d/div {:class ""}
+           ($ Select {:popoverProps (j/lit {:minimal true})
+                      :createNewItemFromQuery create-new-from-query-handler
+                      :createNewItemRenderer create-new-renderer
+                      :itemRenderer renderer
+                      :itemPredicate predicate-filter
+                      :onItemSelect #(on-selected-wrapper %)
+                      :items (clj->js options)}
+              ($ Button {:text value
+                         :small true
+                         :minimal true
+                         :rightIcon "chevron-down"})))))

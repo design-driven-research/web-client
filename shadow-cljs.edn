@@ -1,4 +1,4 @@
-{:deps {:aliases [:cljs]}
+{:deps {:aliases [:cljs :test]}
  :dev-http {4200 "public"}
  :builds
  {:frontend
@@ -10,7 +10,12 @@
    :release {:compiler-options {:optimizations :advanced}}
    :devtools {:reload-strategy :full
               :repl-init-ns user
-              :preloads [rdd.dev]}}}}
+              :preloads [rdd.dev]}}
+
+  :test {:target    :browser-test
+         :test-dir  "resources/public/js/test"
+         :devtools {:http-port 8021
+                    :http-root "resources/public/js/test"}}}}
 
 
 
