@@ -3,21 +3,22 @@
             [rdd.utils.debounce :refer [debounce]]
             [helix.hooks :as hooks]
             [helix.core :refer [$]]
+            [rdd.components.ui.uom-select :refer [UOMSelect]]
             [rdd.lib.defnc :refer [defnc]]
-            [helix.dom :as d]
-            [rdd.components.ui.simple-select :refer [SimpleSelect]]))
+            [helix.dom :as d]))
 
 (defnc QuantityEditor
   "Quantity & uom control."
   [{:keys [label
            qty
-           uom-code
-           options
+           uoms
+           selected-uom-code
            on-quantity-changed
            on-uom-changed]}]
+
   (let [[local-qty set-local-qty!] (hooks/use-state qty)
         quantity-changed-debounced (hooks/use-callback :once (debounce
-                                                              #(on-quantity-changed {:quantity %})
+                                                              #(on-quantity-changed %)
                                                               1000))
 
         on-local-qty-changed (hooks/use-callback :once (fn [qty qty-str] (set-local-qty! qty-str)
@@ -39,8 +40,6 @@
                                    :onValueChange on-local-qty-changed}))
 
            (d/div {:class "ml-2 w-3/12"}
-                  ($ SimpleSelect {:value uom-code
-                                   :on-existing-selected #(on-uom-changed {:uom-code (:uom-code %)})
-                                   :options options})))))
-
-
+                  ($ UOMSelect {:uoms uoms
+                                :selected-uom-code selected-uom-code
+                                :on-change on-uom-changed})))))

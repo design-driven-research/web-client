@@ -1,21 +1,19 @@
 (ns rdd.components.forms.item-default-settings
   (:require [helix.core :refer [$]]
+            [helix.hooks :as hooks]
             [rdd.lib.defnc :refer [defnc]]
-            [helix.dom :as d]
-            [rdd.components.ui.simple-select :refer [SimpleSelect]]))
+            [rdd.components.ui.uom-select :refer [UOMSelect]]
+            [helix.dom :as d]))
 
 (defnc ItemDefaultSettings
   [{:keys [item-uuid
            label
-           item-yield-uom
-           item-yield-uom-changed-handler]}]
+           item-yield-uom-code
+           item-yield-uom-changed-handler
+           uoms]}]
 
   (d/div {:class "item-quantity flex items-center"}
          (d/span {:class "mr-4"} label)
-         ($ SimpleSelect {:value item-yield-uom
-                          :on-existing-selected #(item-yield-uom-changed-handler {:uuid item-uuid
-                                                                                  :uom (:uom-code %)})
-                          :options [{:title "gr"
-                                     :uom-code "gr"}
-                                    {:title "lb"
-                                     :uom-code "lb"}]})))
+         ($ UOMSelect {:uoms uoms
+                       :selected-uom-code item-yield-uom-code
+                       :on-change item-yield-uom-changed-handler})))

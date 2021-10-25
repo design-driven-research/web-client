@@ -1,7 +1,6 @@
 (ns user
   (:require [datascript.core :as d]
-            [postmortem.core :as pm]
-            [rdd.db :as db]))
+            [postmortem.core :as pm]))
 
 (defn reset-postmortem!
   []

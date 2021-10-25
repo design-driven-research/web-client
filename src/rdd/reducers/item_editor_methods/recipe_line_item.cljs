@@ -8,8 +8,8 @@
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod item-editor-reducer :update-recipe-line-item-quantity-uom
-  [{:as state :keys [current-product-name]} [_ {:as args :keys [uuid uom-code]}]]
-  (store/update-recipe-line-item-quantity-uom! uuid uom-code)
+  [{:as state :keys [current-product-name]} [_ {:as args :keys [rli-uuid uom-uuid]}]]
+  (store/update-recipe-line-item-quantity-uom! rli-uuid uom-uuid)
   (assoc state :item (store/item->tree current-product-name)))
 
 (defmethod item-editor-reducer :create-sibling-recipe-line-item

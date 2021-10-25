@@ -11,6 +11,7 @@
   ($ MultistepDialog {:title (str "Create new item " start-value)
                       :icon "info-sign"
                       :finalButtonProps (clj->js {:onClick (fn [] (handle-create-item-submit {:item-type :production.type/ATOM
+                                                                                              :item-default-uom-code "gr"
                                                                                               :item-name start-value}))})
                       :isOpen is-open?}
      ($ DialogStep {:id "choose-type"

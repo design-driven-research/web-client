@@ -3,6 +3,7 @@
             [helix.core :refer [$]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
+            [rdd.components.menus.recipe-line-item-settings-menu :refer [RecipeLineItemSettingsMenu]]
             [rdd.components.dropdowns.company-item-selector :refer [CompanyItemSelector]]
             [rdd.components.dropdowns.item-selector :refer [ItemSelector]]
             [rdd.components.menus.add-row-menu :refer [AddRowMenu]]
@@ -43,13 +44,25 @@
            ($ Button {:icon "chevron-right"
                       :minimal true}))))
 
-(defnc SettingsPanel [{:keys [is-settings-open? rli]}]
+(defnc SettingsPanel [{:keys [close-panel!
+                              is-settings-open?
+                              rli]}]
+
+
   (when is-settings-open?
     (let [production-type (-> rli :recipe-line-item/child-item :item/production-type)]
-      (case production-type
-        :production.type/ATOM ($ AtomicItemSettings {:rli rli})
-        :production.type/COMPOSITE ($ CompositeItemSettings {:rli rli})
-        :else (d/div "No matching production type found")))))
+      (d/div {:class "border w-full relative"}
+
+
+             (case production-type
+               :production.type/ATOM ($ AtomicItemSettings {:rli rli})
+               :production.type/COMPOSITE ($ CompositeItemSettings {:rli rli})
+               :else (d/div "No matching production type found"))
+
+             (d/div {:class "mr-2 mt-2 absolute top-0 right-0 border"}
+                    ($ Button {:icon "small-cross"
+                               :minimal true
+                               :onClick close-panel!}))))))
 
 (defnc QuantityEditorWrapper [{:keys [rli
                                       uoms
@@ -58,41 +71,44 @@
                                       update-uom-handler]}]
 
   (let [quantity (or (:recipe-line-item/quantity rli)
-                     0)
-        options (map (fn [{:uom/keys [code uuid]}]
-                       {:title code
-                        :uom-code code
-                        :uuid uuid}) uoms)]
+                     0)]
     (when (not is-draft?)
+
       ($ QuantityEditor {:label "Qty"
                          :qty quantity
-                         :uom-code (:recipe-line-item/quantity-uom rli)
-                         :options options
+                         :selected-uom-code (:recipe-line-item/quantity-uom-code rli)
+                         :uoms uoms
                          :on-quantity-changed update-quantity-handler
                          :on-uom-changed update-uom-handler}))))
 
-(defnc SettingsToggleButton [{:keys [is-settings-open-state
-                                     is-settings-open?]}]
-  ($ Button {:icon "cog"
-             :minimal true
-             :onClick #(is-settings-open-state (not is-settings-open?))}))
-
-(defnc HoverMenu [{:keys [wrapper-container
-                          on-add-row-below
-                          on-add-row-inside]}]
+(defnc AddRowMenuHoverUI [{:keys [wrapper-container
+                                  on-add-row-below
+                                  on-add-row-inside]}]
 
   (let [is-hovering? (use-hover wrapper-container)]
-    (d/div {:class "hover-menu flex align-center justify-center items-center w-8 mr-2 h-full"}
+    (d/div {:class "hover-menu flex align-center justify-center items-center w-12"}
            (when is-hovering?
              ($ AddRowMenu {:on-add-row-below on-add-row-below
                             :on-add-row-inside on-add-row-inside})))))
 
+(defnc RecipeLineItemSettingMenuUI [{:keys [wrapper-container
+                                            open-settings-panel!
+                                            toggle-detailed-info!
+                                            delete-row!]}]
+
+  (let [is-hovering? (use-hover wrapper-container)]
+    (d/div {:class "hover-menu flex align-center justify-center items-center w-12"}
+           (when is-hovering?
+             ($ RecipeLineItemSettingsMenu {:open-settings-panel! open-settings-panel!
+                                            :toggle-detailed-info! toggle-detailed-info!
+                                            :delete-row! delete-row!})))))
+
 (defnc RecipeLineItem
   "Item row"
   [{:keys [rli]}]
-
   (let [;; Local state
-        [is-settings-open? is-settings-open-state] (hooks/use-state false)
+        [is-settings-open? set-is-settings-open!] (hooks/use-state false)
+        [is-detailed-info? set-is-detailed-info!] (hooks/use-state false)
         [is-showing-children? set-is-showing-children-state] (hooks/use-state true)
 
         ;; Reducer events
@@ -106,7 +122,6 @@
 
         on-company-item-selected (builder :update-recipe-line-company-item :once)
         on-delete-recipe-line-item (builder :delete-recipe-line-item :once)
-
 
         ;; Local bindings
         rli-uuid (:recipe-line-item/uuid rli)
@@ -143,20 +158,39 @@
                               rli-uuid
                               :insert-type :inside}))
 
+        open-settings-panel! (hooks/use-callback
+                              :once
+                              #(set-is-settings-open! true))
+
+        close-settings-panel! (hooks/use-callback
+                               :once
+                               #(set-is-settings-open! false))
+
+        show-detailed-info! (hooks/use-callback
+                             :once
+                             #(set-is-detailed-info! true))
+
+        hide-detailed-info! (hooks/use-callback
+                             :once
+                             #(set-is-detailed-info! false))
+
+        toggle-detailed-info! (hooks/use-callback
+                               [is-detailed-info?]
+                               #(set-is-detailed-info! (not is-detailed-info?)))
+
         update-quantity-handler (hooks/use-callback
                                  [rli-uuid]
-                                 (fn [{:keys [quantity]}]
+                                 (fn [rli-uuid quantity]
                                    (update-recipe-line-item-quantity-handler
                                     {:uuid rli-uuid
                                      :quantity quantity})))
 
         update-uom-handler (hooks/use-callback
                             [rli-uuid]
-                            (fn [{:keys [uom-code]}]
+                            (fn [uom-uuid]
                               (recipe-line-item-quantity-uom-selected-handler
-                               {:uuid rli-uuid
-                                :uom-code uom-code})))
-
+                               {:rli-uuid rli-uuid
+                                :uom-uuid uom-uuid})))
 
         on-company-item-selected-wrapper (hooks/use-callback
                                           [rli-uuid]
@@ -168,51 +202,59 @@
     (d/div {:class "item-wrapper flex flex-col"}
 
            (d/div {:ref wrapper-container
-                   :class "item-header-wrapper align-center justify-center items-center flex mt-2"}
+                   :class "flex flex-col mt-2"}
 
-                  ($ HoverMenu {:wrapper-container wrapper-container
-                                :on-add-row-below on-add-row-below
-                                :on-add-row-inside on-add-row-inside})
+                  (d/div {:class "item-header-wrapper flex items-center"}
 
-                  (d/div {:class "flex flex-col w-full border"}
+                         ($ AddRowMenuHoverUI {:wrapper-container wrapper-container
+                                               :on-add-row-below on-add-row-below
+                                               :on-add-row-inside on-add-row-inside})
 
-                         (d/div {:class "flex items-center justify-between p-2"}
+                         (d/div {:class "flex flex-col w-full border"}
 
-                                (when has-children?
-                                  ($ ChildToggleNav {:is-showing-children? is-showing-children?
-                                                     :set-is-showing-children-state set-is-showing-children-state}))
+                                (d/div {:class "flex items-center justify-between p-2"}
 
-                                (d/div {:class "flex items-center justify-between w-full justify-between p-2"}
-                                       (d/div {:class "flex items-center w-9/12"}
-                                              (d/div {:class "w-4/12"}
-                                                     ($ ItemSelector {:rli rli
-                                                                      :items items
-                                                                      :on-item-selected on-rli-item-selected
-                                                                      :on-item-created on-item-created}))
+                                       (when has-children?
+                                         ($ ChildToggleNav {:is-showing-children? is-showing-children?
+                                                            :set-is-showing-children-state set-is-showing-children-state}))
 
-                                              (d/div {:class "w-8/12"}
-                                                     ($ CompanyItemSelector {:rli rli
-                                                                             :uoms uoms
-                                                                             :vendors vendors
-                                                                             :on-selected (partial on-company-item-selected-wrapper rli-uuid)
-                                                                             :company-items company-items})))
+                                       (d/div {:class "flex items-center justify-between w-full justify-between p-2"}
+                                              (d/div {:class "flex items-center w-9/12"}
+                                                     (d/div {:class "w-4/12"}
+                                                            ($ ItemSelector {:rli rli
+                                                                             :items items
+                                                                             :on-item-selected on-rli-item-selected
+                                                                             :on-item-created on-item-created}))
 
-                                       (d/div {:class "w-3/12 "}
-                                              ($ QuantityEditorWrapper {:rli rli
-                                                                        :uoms uoms
-                                                                        :is-draft? is-draft?
-                                                                        :update-quantity-handler update-quantity-handler
-                                                                        :update-uom-handler update-uom-handler})))
+                                                     (d/div {:class "w-8/12"}
+                                                            ($ CompanyItemSelector {:rli rli
+                                                                                    :uoms uoms
+                                                                                    :vendors vendors
+                                                                                    :on-selected (partial on-company-item-selected-wrapper rli-uuid)
+                                                                                    :company-items company-items})))
 
-                                ($ SettingsToggleButton {:is-settings-open-state is-settings-open-state
-                                                         :is-settings-open? is-settings-open?}))
+                                              (d/div {:class "w-3/12 "}
+                                                     ($ QuantityEditorWrapper {:rli rli
+                                                                               :uoms uoms
+                                                                               :is-draft? is-draft?
+                                                                               :update-quantity-handler (partial update-quantity-handler rli-uuid)
+                                                                               :update-uom-handler update-uom-handler})))))
 
-                         (d/div {:class "flex"}
-                                ($ SettingsPanel {:is-settings-open? is-settings-open?
-                                                  :rli rli})
-                                ($ Button {:onClick (fn []
-                                                      (on-delete-recipe-line-item rli-uuid))
-                                           :text "x"}))))
+
+                         ($ RecipeLineItemSettingMenuUI {:wrapper-container wrapper-container
+                                                         :open-settings-panel! open-settings-panel!
+                                                         :toggle-detailed-info! toggle-detailed-info!
+                                                         :delete-row! (partial on-delete-recipe-line-item rli-uuid)}))
+
+                  (when is-detailed-info?
+                    (d/div {:class "flex ml-12 mr-12 p-4 border"}
+                           (d/div (str "Total line item cost: " (:recipe-line-item/total-cost rli)))))
+
+                  (d/div {:class "flex ml-12 mr-12"}
+
+                         ($ SettingsPanel {:close-panel! close-settings-panel!
+                                           :is-settings-open? is-settings-open?
+                                           :rli rli})))
 
            (when (and has-children?
                       is-showing-children?)

@@ -103,14 +103,19 @@
 
 (declare reset-db! seed-db setup-listeners)
 
-(defstate ^{:on-reload :noop} dsdb
+(defstate ^{:on-reload :noop} conn
   :start (do
            (js/console.log "Recreating dsdb")
-           (let [conn (atom (d/empty-db (schema))
-                            :meta {:listeners (atom {})})]
-             (reset-db! conn)
-             (setup-listeners conn)
-             conn)))
+           (let [db-conn (atom (d/empty-db (schema))
+                               :meta {:listeners (atom {})})]
+             (reset-db! db-conn)
+             (setup-listeners db-conn)
+             db-conn)))
+
+(defn db
+  "A snapshot of the current db"
+  []
+  (d/db @conn))
 
 (defn seed-db
   "Seed the db with data"
@@ -129,24 +134,27 @@
                                         :data db}))))
 
 (defn transact-from-local!
-  [conn tx-data]
-  (let [result (d/transact! conn tx-data)]
+  [& {:keys [tx-data
+             db-conn]
+      :or {db-conn @conn}}]
+  (let [result (d/transact! db-conn tx-data)]
     (publish! {:topic :local-transaction-update
                :data tx-data})
     result))
+
 
 (defn initial-data->db!
   "Push an initial data load into the db"
   [raw-data]
   (let [data (-> raw-data :result :data)
         tx-data (initial-remote->tx-data data)]
-    (d/transact! @dsdb tx-data)
+    (d/transact! @conn tx-data)
     (publish! {:topic :remote-db-loaded})))
 
 (comment
 
-  (tap> (d/datoms (d/db @dsdb) :avet))
-  (tap> (d/datoms (d/db @dsdb) :eavt))
+  (tap> (d/datoms (d/db @conn) :avet))
+  (tap> (d/datoms (d/db @conn) :eavt))
 
   ;; 
   )

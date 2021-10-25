@@ -3,14 +3,13 @@
             [datascript.core :as d]
             [nano-id.core :refer [nano-id]]
             [postmortem.core :as pm]
-            [rdd.utils.for-indexed :refer [for-indexed]]
             [rdd.converters.uom :as uom-converters]
             [rdd.db :as db-core]
             [rdd.services.event-bus :as eb]))
 
 (defn- conn
   []
-  @db-core/dsdb)
+  @db-core/conn)
 
 (defn- db
   []
@@ -196,6 +195,18 @@
        (db)
        item-uuid))
 
+(defn normalized-costs-for-item
+  "Returns a vector of quotes normalized by their uom"
+  [item-uuid in-uom-code]
+  (let [quotes (item-quotes item-uuid)
+        normalized-costs (for [{:keys [cost uom quantity]} quotes]
+
+                           (let [conversion (item-quantity-in-uom item-uuid 1 uom in-uom-code)
+                                 factor (:factor conversion)]
+                             {:normalized-cost (/ cost quantity factor)
+                              :normalized-uom-code in-uom-code}))]
+    (sort-by :normalized-cost normalized-costs)))
+
 (defn cost-for-qty
   "Get cost for a specific quantity and UOM based on item uuid
    
@@ -203,13 +214,12 @@
    
    "
   [item-uuid to-quantity to-uom-code]
-  (let [quotes (item-quotes item-uuid)
-        quote (-> quotes (first))
-        {:keys [cost uom quantity]} quote
-        normalized-cost (/ cost quantity)]
-    (if (= uom to-uom-code)
+  (let [normalized-costs (normalized-costs-for-item item-uuid to-uom-code)
+        cheapest-cost (first normalized-costs)
+        {:keys [normalized-cost normalized-uom-code]} cheapest-cost]
+    (if (= normalized-uom-code to-uom-code)
       (* to-quantity normalized-cost)
-      (let [conversion (item-quantity-in-uom item-uuid to-quantity to-uom-code uom)
+      (let [conversion (item-quantity-in-uom item-uuid to-quantity to-uom-code normalized-uom-code)
             converted-cost (* (:total conversion) normalized-cost)]
         (if (js/Number.isNaN converted-cost)
           nil
@@ -276,7 +286,7 @@
                         :item/name item-name
                         :item/production-type item-production-type
                         :item/yield item-yield
-                        :item/yield-uom item-yield-uom
+                        :item/yield-uom-code item-yield-uom
                         :item/cost-per-default-uom item-cost-per-default-uom
                         :item/total-cost total-children-cost
                         :item/children children}))
@@ -288,26 +298,25 @@
                                        item-uuid (:item/uuid item)
                                        recipe-line-item-uuid (:recipe-line-item/uuid rli)
                                        recipe-line-item-quantity (:measurement/quantity rli)
-                                       recipe-line-item-quantity-uom (-> rli :measurement/uom :uom/code)
+                                       recipe-line-item-quantity-uom-code (-> rli :measurement/uom :uom/code)
                                        recipe-line-item-position (-> rli :meta/position)
                                        recipe-line-item-company-item (-> rli :recipe-line-item/company-item)
 
                                       ;;  Should we instead check for if this is composite or atom type item?
                                       ;;  Need to simplify this
                                        child-uom->rli-uom-conversion (when has-child?
-                                                                       (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom (or (:item/yield-uom item)
-                                                                                                                                                                           (:item/default-uom item)))))
+                                                                       (:total (item-quantity-in-uom item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom-code (:item/yield-uom-code item))))
                                        converted-composite-item-cost (when has-child? (* (:item/cost-per-default-uom item) child-uom->rli-uom-conversion))
 
                                        recipe-line-item-total-cost (or
                                                                     converted-composite-item-cost
-                                                                    (cost-for-qty item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom))]
+                                                                    (cost-for-qty item-uuid recipe-line-item-quantity recipe-line-item-quantity-uom-code))]
 
                                    {:type :recipe-line-item
                                     :recipe-line-item/uuid recipe-line-item-uuid
                                     :recipe-line-item/quantity recipe-line-item-quantity
                                     :recipe-line-item/total-cost recipe-line-item-total-cost
-                                    :recipe-line-item/quantity-uom recipe-line-item-quantity-uom
+                                    :recipe-line-item/quantity-uom-code recipe-line-item-quantity-uom-code
                                     :recipe-line-item/position recipe-line-item-position
                                     :recipe-line-item/child-item item
                                     :recipe-line-item/company-item (pm/spy>> :rli-ci recipe-line-item-company-item)}))
@@ -317,13 +326,13 @@
                           (let [item-uuid (:item/uuid item)
                                 item-production-type (:item/production-type item)
                                 item-name (:item/name item)
-                                item-default-uom (-> item :measurement/uom :uom/code)
-                                item-cost-per-default-uom (cost-for-qty item-uuid 1 item-default-uom)]
+                                item-yield-uom-code (-> item :measurement/uom :uom/code)
+                                item-cost-per-default-uom (cost-for-qty item-uuid 1 item-yield-uom-code)]
                             {:item/uuid item-uuid
                              :type :item
                              :item/production-type item-production-type
                              :item/name item-name
-                             :item/default-uom item-default-uom
+                             :item/yield-uom-code item-yield-uom-code
                              :item/cost-per-default-uom item-cost-per-default-uom
                              :item/company-items (company-items-for-item item-uuid)}))]
 
@@ -350,14 +359,14 @@
         has-recipe-line-item-uuid? recipe-line-item-uuid]
 
     (when has-recipe-line-item-uuid?
-      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
+      (let [tx (db-core/transact-from-local! :tx-data [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/quantity prepped-quantity]])
             new-db (:db-after tx)]
         new-db))))
 
 (defn update-item-yield!
-  [item-uuid qty]
+  [item-uuid yield]
 
-  (let [parsed-yield (js/parseFloat qty)
+  (let [parsed-yield (js/parseFloat yield)
         prepped-yield (if (and (number? parsed-yield)
                                (>= parsed-yield 0))
                         parsed-yield
@@ -365,7 +374,7 @@
         has-item-uuid? item-uuid]
 
     (when has-item-uuid?
-      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:item/uuid item-uuid] :measurement/yield prepped-yield]])
+      (let [tx (db-core/transact-from-local! :tx-data [[:db/add [:item/uuid item-uuid] :measurement/yield prepped-yield]])
             new-db (:db-after tx)]
 
         (eb/publish! {:topic :update/item
@@ -390,20 +399,20 @@
        first))
 
 (defn update-item-yield-uom!
-  [item-uuid uom-code]
+  [item-uuid uom-uuid]
   (let [has-item-uuid? item-uuid]
     (when has-item-uuid?
 
-      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:item/uuid item-uuid] :measurement/uom [:uom/code uom-code]]])
+      (let [tx (db-core/transact-from-local! :tx-data [[:db/add [:item/uuid item-uuid] :measurement/uom [:uom/uuid uom-uuid]]])
             new-db (:db-after tx)]
         new-db))))
 
 (defn update-recipe-line-item-quantity-uom!
-  [recipe-line-item-uuid uom-code]
-  (let [has-recipe-line-item-uuid? recipe-line-item-uuid]
+  [rli-uuid uom-uuid]
+  (let [has-recipe-line-item-uuid? rli-uuid]
     (when has-recipe-line-item-uuid?
 
-      (let [tx (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid recipe-line-item-uuid] :measurement/uom [:uom/code uom-code]]])
+      (let [tx (db-core/transact-from-local! :tx-data [[:db/add [:recipe-line-item/uuid rli-uuid] :measurement/uom [:uom/uuid uom-uuid]]])
             new-db (:db-after tx)]
 
         new-db))))
@@ -498,42 +507,44 @@
                         :before (:next-position-before position-info)
                         :after (:next-position-after position-info))]
 
-    (db-core/transact-from-local! (conn) [[:db/add -1 :recipe-line-item/uuid  new-uuid]
-                                          [:db/add -1 :meta/position next-position]
-                                          [:db/add [:item/uuid parent-item-uuid] :composite/contains -1]])))
+    (db-core/transact-from-local! :tx-data [[:db/add -1 :recipe-line-item/uuid  new-uuid]
+                                            [:db/add -1 :meta/position next-position]
+                                            [:db/add [:item/uuid parent-item-uuid] :composite/contains -1]])))
 
 (defn update-recipe-line-item-item!
   [rli-uuid item-uuid]
-  (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
+  (db-core/transact-from-local! :tx-data [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item [:item/uuid item-uuid]]]))
 
 
 (defn update-recipe-line-company-item!
   [rli-uuid company-item-uuid]
-  (db-core/transact-from-local! (conn) [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/company-item [:company-item/uuid company-item-uuid]]]))
+  (db-core/transact-from-local! :tx-data [[:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/company-item [:company-item/uuid company-item-uuid]]]))
 
 (defn delete-recipe-line-item!
   [uuid]
-  (db-core/transact-from-local! (conn) [[:db/retractEntity [:recipe-line-item/uuid uuid]]]))
+  (db-core/transact-from-local! :tx-data [[:db/retractEntity [:recipe-line-item/uuid uuid]]]))
 
 (defn create-company!
   [{:keys [name uuid]}]
-  (db-core/transact-from-local! (conn) [[:db/add -1 :company/uuid uuid]
-                                        [:db/add -1 :company/name name]]))
+  (db-core/transact-from-local! :tx-data [[:db/add -1 :company/uuid uuid]
+                                          [:db/add -1 :company/name name]]))
 
 (defn create-uom!
   [{:keys [name code uuid system type]}]
-  (db-core/transact-from-local! (conn) [[:db/add -1 :uom/uuid uuid]
-                                        [:db/add -1 :uom/name name]
-                                        [:db/add -1 :uom/code code]
-                                        [:db/add -1 :uom/system system]
-                                        [:db/add -1 :uom/type type]]))
+  (db-core/transact-from-local! :tx-data [[:db/add -1 :uom/uuid uuid]
+                                          [:db/add -1 :uom/name name]
+                                          [:db/add -1 :uom/code code]
+                                          [:db/add -1 :uom/system system]
+                                          [:db/add -1 :uom/type type]]))
 
 (defn create-and-link-item!
-  [rli-uuid item-name item-type]
-  (db-core/transact-from-local! (conn) [[:db/add -1 :item/uuid (nano-id)]
-                                        [:db/add -1 :item/name item-name]
-                                        [:db/add -1 :item/production-type item-type]
-                                        [:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item -1]]))
+  [{:keys [rli-uuid item-name item-type item-default-uom-code item-yield]}]
+  (db-core/transact-from-local! :tx-data [[:db/add -1 :item/uuid (nano-id)]
+                                          [:db/add -1 :item/name item-name]
+                                          [:db/add -1 :measurement/uom [:uom/code item-default-uom-code]]
+                                          [:db/add -1 :measurement/yield (or item-yield 1)]
+                                          [:db/add -1 :item/production-type item-type]
+                                          [:db/add [:recipe-line-item/uuid rli-uuid] :recipe-line-item/item -1]]))
 
 (defn create-company-item!
   [request]
@@ -561,7 +572,7 @@
 
         all-tx (concat company-item-tx company-tx quote-tx conversions-tx)]
 
-    (db-core/transact-from-local! (conn) all-tx)))
+    (db-core/transact-from-local! :tx-data all-tx)))
 
 
 (comment

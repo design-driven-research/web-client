@@ -11,22 +11,25 @@
 
 (defnc CompositeItemSettings
   [{:keys [rli]}]
+  (tap> rli)
   (let [item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
         item-yield (-> rli :recipe-line-item/child-item :item/yield)
-        item-yield-uom (-> rli :recipe-line-item/child-item :item/yield-uom)
+        item-yield-uom-code (-> rli :recipe-line-item/child-item :item/yield-uom-code)
         [current-selected-index set-current-selected-index] (hooks/use-state "yield")
-        [_ _ builder] (use-item-state)
+        [state _ builder] (use-item-state)
+
+        uoms (:uoms state)
         item-yield-changed-handler (builder :update-item-yield :once)
         item-yield-uom-changed-handler (builder :update-item-yield-uom :once)
 
 
-        update-yield-handler (hooks/use-callback [item-uuid] (fn [{:keys [quantity]}]
-                                                               (item-yield-changed-handler {:uuid item-uuid
-                                                                                            :quantity quantity})))
+        update-yield-handler (hooks/use-callback [item-uuid] (fn [item-uuid yield]
+                                                               (item-yield-changed-handler {:item-uuid item-uuid
+                                                                                            :item-yield yield})))
 
-        update-yield-uom-handler (hooks/use-callback [item-uuid] (fn [{:keys [uom-code]}]
-                                                                   (item-yield-uom-changed-handler {:uuid item-uuid
-                                                                                                    :uom-code uom-code})))]
+        update-yield-uom-handler (hooks/use-callback [item-uuid] (fn [item-uuid uom-uuid]
+                                                                   (item-yield-uom-changed-handler {:item-uuid item-uuid
+                                                                                                    :uom-uuid uom-uuid})))]
     (d/div {:class "p-4 border"}
            ($ Tabs {:id "settings"
                     :animate true
@@ -35,10 +38,11 @@
               ($ Tab {:id "yield"
                       :title "Yield"
                       :panel ($ ItemYieldSettings {:item-uuid item-uuid
+                                                   :uoms uoms
                                                    :item-yield item-yield
-                                                   :item-yield-uom item-yield-uom
-                                                   :item-yield-changed-handler update-yield-handler
-                                                   :item-yield-uom-changed-handler update-yield-uom-handler})})
+                                                   :item-yield-uom-code item-yield-uom-code
+                                                   :item-yield-changed-handler (partial update-yield-handler item-uuid)
+                                                   :item-yield-uom-changed-handler (partial update-yield-uom-handler item-uuid)})})
               ($ Tab {:id "labor"
                       :title "Labor"
                       :panel ($ ItemLaborSettings/Core)})

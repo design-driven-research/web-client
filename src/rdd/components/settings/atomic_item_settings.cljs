@@ -10,13 +10,23 @@
 
 (defnc AtomicItemSettings
   [{:keys [rli]}]
+
   (let [item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
-        item-yield-uom (or (-> rli :recipe-line-item/child-item :item/yield)
-                           (-> rli :recipe-line-item/child-item :item/uom))
+        item-yield-uom-code (-> rli :recipe-line-item/child-item :item/yield-uom-code)
         [current-selected-index set-current-selected-index] (hooks/use-state "settings")
-        [_ _ builder] (use-item-state)
-        item-yield-uom-changed-handler (builder :update-item-yield-uom :once)]
-    (d/div {:class "p-4 border"}
+        [state _ builder] (use-item-state)
+
+        uoms (:uoms state)
+
+        item-yield-uom-changed-handler (builder :update-item-yield-uom :once)
+
+        item-yield-uom-changed-handler-wrapper (hooks/use-callback [uoms item-yield-uom-code]
+                                                                   (fn [item-uuid uom-uuid]
+                                                                     (item-yield-uom-changed-handler {:item-uuid item-uuid
+                                                                                                      :uom-uuid uom-uuid})))]
+
+
+    (d/div {:class "p-4"}
            ($ Tabs {:id "settings"
                     :animate true
                     :selectedTabId current-selected-index
@@ -25,8 +35,9 @@
                       :title "Settings"
                       :panel ($ ItemDefaultSettings {:label "Default UOM"
                                                      :item-uuid item-uuid
-                                                     :item-yield-uom item-yield-uom
-                                                     :item-yield-uom-changed-handler item-yield-uom-changed-handler})})
+                                                     :item-yield-uom-code item-yield-uom-code
+                                                     :item-yield-uom-changed-handler (partial item-yield-uom-changed-handler-wrapper item-uuid)
+                                                     :uoms uoms})})
 
               ($ Tab {:id "conversions"
                       :title "Conversions"

@@ -37,11 +37,12 @@
         handle-create-item-submit (hooks/use-callback
                                    :once
                                    (fn
-                                     [{:keys [item-name item-type]}]
+                                     [{:keys [item-name item-type item-default-uom-code]}]
                                      (on-item-created
                                       {:rli-uuid rli-uuid
                                        :item-name item-name
-                                       :item-type item-type})
+                                       :item-type item-type
+                                       :item-default-uom-code item-default-uom-code})
                                      (set-create-item-state!
                                       {:current-state :empty
                                        :value nil})))
