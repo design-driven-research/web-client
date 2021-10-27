@@ -55,8 +55,8 @@ rdd.db.conn = mount.core.__GT_DerefableState("#'rdd.db/conn");
 mount.core.mount_it(new cljs.core.Var(function(){return rdd.db.conn;},new cljs.core.Symbol("rdd.db","conn","rdd.db/conn",974576864,null),cljs.core.PersistentHashMap.fromArrays([new cljs.core.Keyword(null,"ns","ns",441598760),new cljs.core.Keyword(null,"name","name",1843675177),new cljs.core.Keyword(null,"file","file",-1269645878),new cljs.core.Keyword(null,"end-column","end-column",1425389514),new cljs.core.Keyword(null,"column","column",2078222095),new cljs.core.Keyword(null,"on-reload","on-reload",869927793),new cljs.core.Keyword(null,"line","line",212345235),new cljs.core.Keyword(null,"end-line","end-line",1837326455),new cljs.core.Keyword(null,"arglists","arglists",1661989754),new cljs.core.Keyword(null,"doc","doc",1913296891),new cljs.core.Keyword(null,"test","test",577538877)],[new cljs.core.Symbol(null,"rdd.db","rdd.db",-284573553,null),new cljs.core.Symbol(null,"conn","conn",1918841190,null),"rdd/db.cljs",35,1,new cljs.core.Keyword(null,"noop","noop",-673731258),133,133,cljs.core.List.EMPTY,null,(cljs.core.truth_(rdd.db.conn)?rdd.db.conn.cljs$lang$test:null)])),"#'rdd.db/conn",new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword(null,"order","order",-1254677256),(2),new cljs.core.Keyword(null,"start","start",-355208981),(function (){
 console.log("Recreating dsdb");
 
-var db_conn = cljs.core.atom.cljs$core$IFn$_invoke$arity$variadic((function (){var G__47570 = rdd.db.schema();
-return (datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1 ? datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1(G__47570) : datascript.core.empty_db.call(null,G__47570));
+var db_conn = cljs.core.atom.cljs$core$IFn$_invoke$arity$variadic((function (){var G__46850 = rdd.db.schema();
+return (datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1 ? datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1(G__46850) : datascript.core.empty_db.call(null,G__46850));
 })(),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"meta","meta",1499536964),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"listeners","listeners",394544445),cljs.core.atom.cljs$core$IFn$_invoke$arity$1(cljs.core.PersistentArrayMap.EMPTY)], null)], 0));
 (rdd.db.reset_db_BANG_.cljs$core$IFn$_invoke$arity$1 ? rdd.db.reset_db_BANG_.cljs$core$IFn$_invoke$arity$1(db_conn) : rdd.db.reset_db_BANG_.call(null,db_conn));
 
@@ -85,8 +85,8 @@ rdd.db.seed_db = (function rdd$db$seed_db(db){
 return datascript.core.transact_BANG_.cljs$core$IFn$_invoke$arity$2(db,rdd.db.enum_data());
 });
 rdd.db.reset_db_BANG_ = (function rdd$db$reset_db_BANG_(conn){
-datascript.core.reset_conn_BANG_.cljs$core$IFn$_invoke$arity$2(conn,(function (){var G__47573 = rdd.db.schema();
-return (datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1 ? datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1(G__47573) : datascript.core.empty_db.call(null,G__47573));
+datascript.core.reset_conn_BANG_.cljs$core$IFn$_invoke$arity$2(conn,(function (){var G__46853 = rdd.db.schema();
+return (datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1 ? datascript.core.empty_db.cljs$core$IFn$_invoke$arity$1(G__46853) : datascript.core.empty_db.call(null,G__46853));
 })());
 
 return rdd.db.seed_db(conn);
@@ -98,14 +98,14 @@ return rdd.services.event_bus.publish_BANG_(new cljs.core.PersistentArrayMap(nul
 });
 rdd.db.transact_from_local_BANG_ = (function rdd$db$transact_from_local_BANG_(var_args){
 var args__4824__auto__ = [];
-var len__4818__auto___47598 = arguments.length;
-var i__4819__auto___47599 = (0);
+var len__4818__auto___46857 = arguments.length;
+var i__4819__auto___46858 = (0);
 while(true){
-if((i__4819__auto___47599 < len__4818__auto___47598)){
-args__4824__auto__.push((arguments[i__4819__auto___47599]));
+if((i__4819__auto___46858 < len__4818__auto___46857)){
+args__4824__auto__.push((arguments[i__4819__auto___46858]));
 
-var G__47600 = (i__4819__auto___47599 + (1));
-i__4819__auto___47599 = G__47600;
+var G__46859 = (i__4819__auto___46858 + (1));
+i__4819__auto___46858 = G__46859;
 continue;
 } else {
 }
@@ -116,11 +116,11 @@ var argseq__4825__auto__ = ((((0) < args__4824__auto__.length))?(new cljs.core.I
 return rdd.db.transact_from_local_BANG_.cljs$core$IFn$_invoke$arity$variadic(argseq__4825__auto__);
 });
 
-(rdd.db.transact_from_local_BANG_.cljs$core$IFn$_invoke$arity$variadic = (function (p__47584){
-var map__47585 = p__47584;
-var map__47585__$1 = cljs.core.__destructure_map(map__47585);
-var tx_data = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__47585__$1,new cljs.core.Keyword(null,"tx-data","tx-data",934159761));
-var db_conn = cljs.core.get.cljs$core$IFn$_invoke$arity$3(map__47585__$1,new cljs.core.Keyword(null,"db-conn","db-conn",479627805),cljs.core.deref(rdd.db.conn));
+(rdd.db.transact_from_local_BANG_.cljs$core$IFn$_invoke$arity$variadic = (function (p__46855){
+var map__46856 = p__46855;
+var map__46856__$1 = cljs.core.__destructure_map(map__46856);
+var tx_data = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__46856__$1,new cljs.core.Keyword(null,"tx-data","tx-data",934159761));
+var db_conn = cljs.core.get.cljs$core$IFn$_invoke$arity$3(map__46856__$1,new cljs.core.Keyword(null,"db-conn","db-conn",479627805),cljs.core.deref(rdd.db.conn));
 var result = datascript.core.transact_BANG_.cljs$core$IFn$_invoke$arity$2(db_conn,tx_data);
 rdd.services.event_bus.publish_BANG_(new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"topic","topic",-1960480691),new cljs.core.Keyword(null,"local-transaction-update","local-transaction-update",-962857219),new cljs.core.Keyword(null,"data","data",-232669377),tx_data], null));
 
@@ -130,9 +130,9 @@ return result;
 (rdd.db.transact_from_local_BANG_.cljs$lang$maxFixedArity = (0));
 
 /** @this {Function} */
-(rdd.db.transact_from_local_BANG_.cljs$lang$applyTo = (function (seq47577){
+(rdd.db.transact_from_local_BANG_.cljs$lang$applyTo = (function (seq46854){
 var self__4806__auto__ = this;
-return self__4806__auto__.cljs$core$IFn$_invoke$arity$variadic(cljs.core.seq(seq47577));
+return self__4806__auto__.cljs$core$IFn$_invoke$arity$variadic(cljs.core.seq(seq46854));
 }));
 
 /**

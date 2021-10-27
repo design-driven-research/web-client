@@ -613,6 +613,10 @@
 
     (db-core/transact-from-local! :tx-data all-tx)))
 
+(defn transact-local-tx-data!
+  [tx-data]
+  (db-core/transact-from-local! :tx-data tx-data))
+
 
 (comment
 

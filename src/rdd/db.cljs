@@ -175,7 +175,6 @@
   [raw-data]
   (let [data (-> raw-data :result :data)
         tx-data (initial-remote->tx-data data)]
-    (tap> {:tx-data tx-data})
     (d/transact! @conn tx-data)
     (publish! {:topic :remote-db-loaded})))
 

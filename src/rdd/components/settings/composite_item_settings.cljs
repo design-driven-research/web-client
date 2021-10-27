@@ -22,7 +22,6 @@
         item-yield-uom-code (:item/yield-uom-code child-item)
         item-process (:item/process child-item)
         uoms (:uoms state)
-        roles (:roles state)
 
         ;; Callbacks and handlers
         item-yield-changed-handler (builder :update-item-yield :once)
@@ -50,8 +49,7 @@
                                                    :item-yield-uom-changed-handler (partial update-yield-uom-handler item-uuid)})})
               ($ Tab {:id "labor"
                       :title "Labor"
-                      :panel ($ ItemLaborSettings {:process item-process
-                                                   :roles roles})})
+                      :panel ($ ItemLaborSettings {:process item-process})})
               ($ Tab {:id "conversions"
                       :title "Conversions"
                       :panel ($ ItemConversionSettings)})))))

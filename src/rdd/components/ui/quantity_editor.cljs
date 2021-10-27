@@ -41,5 +41,5 @@
 
            (d/div {:class "ml-2 w-3/12"}
                   ($ UOMSelect {:uoms uoms
-                                :selected-uom-code selected-uom-code
+                                :value selected-uom-code
                                 :on-change on-uom-changed})))))

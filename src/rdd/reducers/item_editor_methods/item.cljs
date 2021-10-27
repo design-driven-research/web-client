@@ -19,3 +19,11 @@
                                 :item-type item-type
                                 :item-default-uom-code item-default-uom-code})
   (assoc state :item (store/item->tree current-product-name)))
+
+(defmethod item-editor-reducer :on-attr-change
+  [{:as state :keys [current-product-name]} [_ tx-data]]
+  (tap> {:tx-data tx-data})
+  (store/transact-local-tx-data! [tx-data])
+  (assoc state :item (store/item->tree current-product-name)))
+
+

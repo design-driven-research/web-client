@@ -6,4 +6,5 @@
            helix.core/defnc clojure.core/defn
            rdd.lib.defnc/defnc clojure.core/defn
            rdd.hello/inc-builder clojure.core/declare
-           mount.core/defstate clojure.core/def}}
+           mount.core/defstate clojure.core/def
+           ajax.macros/easy-api clojure.core/def}}

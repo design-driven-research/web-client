@@ -5,5 +5,6 @@
 
 (bus/subscribe!
  :sys/init
- (fn [data]
+ (fn [_]
    (GET "http://localhost:3000/api/custom/initial-data" {:handler db/initial-data->db!})))
+

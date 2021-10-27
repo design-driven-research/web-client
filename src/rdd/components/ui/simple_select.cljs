@@ -3,6 +3,7 @@
             ["@blueprintjs/select" :refer [Select]]
             [clojure.string :as s]
             [helix.dom :as d]
+            [cljs-bean.core :refer [bean ->clj ->js]]
             [applied-science.js-interop :as j]
             [helix.core :refer [$]]
             [rdd.lib.defnc :refer [defnc]]
@@ -26,7 +27,7 @@
 
   (let [on-selected-wrapper (hooks/use-callback [on-create-selected
                                                  on-existing-selected] (fn [val]
-                                                                         (let [option (js->clj val :keywordize-keys true)
+                                                                         (let [option (->clj val)
                                                                                is-create? (= :create (:type option))]
                                                                            (if is-create?
                                                                              (on-create-selected option)
@@ -71,7 +72,7 @@
                       :itemRenderer renderer
                       :itemPredicate predicate-filter
                       :onItemSelect #(on-selected-wrapper %)
-                      :items (clj->js options)}
+                      :items (->js options)}
               ($ Button {:text value
                          :small true
                          :minimal true

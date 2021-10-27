@@ -14,5 +14,5 @@
   (d/div {:class "item-quantity flex items-center"}
          (d/span {:class "mr-4"} label)
          ($ UOMSelect {:uoms uoms
-                       :selected-uom-code item-yield-uom-code
+                       :value item-yield-uom-code
                        :on-change item-yield-uom-changed-handler})))
