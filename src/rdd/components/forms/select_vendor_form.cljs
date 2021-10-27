@@ -1,5 +1,5 @@
 (ns rdd.components.forms.select-vendor-form
-  (:require ["@blueprintjs/core" :refer [Button Dialog NumericInput]]
+  (:require ["@blueprintjs/core" :refer [Button Dialog]]
             [helix.core :refer [$]]
             [helix.dom :as d]
             [helix.hooks :as hooks]

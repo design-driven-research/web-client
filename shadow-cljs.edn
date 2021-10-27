@@ -9,7 +9,8 @@
    :modules {:main {:init-fn rdd.core/init!}}
    :release {:compiler-options {:optimizations :advanced}}
    :devtools {:reload-strategy :full
-              :repl-init-ns user
+
+              :repl-pprint true
               :preloads [rdd.dev]}}
 
   :test {:target    :browser-test

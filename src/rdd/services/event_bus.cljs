@@ -3,8 +3,8 @@
    [mount.core :refer [defstate]]
    [cljs.core.async.macros :refer (go)])
   (:require
-   [postmortem.core :as pm]
-   [cljs.core.async :refer [chan <! put! close!]]))
+
+   [cljs.core.async :refer [chan <! put!]]))
 
 (declare process-queue)
 

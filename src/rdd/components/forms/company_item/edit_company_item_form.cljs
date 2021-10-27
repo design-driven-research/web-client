@@ -1,33 +1,12 @@
 (ns rdd.components.forms.company-item.edit-company-item-form
-  (:require [tilakone.core :as tk :refer [_]]
-            [rdd.utils.css-utils :refer [get-class]]
-
-            [helix.hooks :as hooks]
-            [rdd.utils.for-indexed :refer [for-indexed]]
+  (:require ["@blueprintjs/core" :refer [Button FormGroup InputGroup InputGroup]]
             [applied-science.js-interop :as j]
-            [clojure.spec.alpha :as s]
-            [bangfe.infinite :as bi]
-            [rdd.components.ui.simple-select :refer [SimpleSelect]]
-            ["@blueprintjs/core" :refer [Button
-                                         InputGroup
-                                         Dialog
-                                         MenuItem
-                                         Classes
-                                         H5
-                                         Intent
-                                         DialogStep
-                                         MultistepDialog
-                                         FormGroup
-                                         InputGroup
-                                         Radio
-                                         RadioGroup]]
             [helix.core :refer [$]]
-            [rdd.lib.defnc :refer [defnc]]
-            [helix.dom :as d]))
+            [helix.dom :as d]
+            [rdd.lib.defnc :refer [defnc]]))
 
 (defnc EditCompanyItemForm
-  [{:keys [vendors
-           state-info
+  [{:keys [state-info
            on-touch
            on-submit
            on-field-change]}]

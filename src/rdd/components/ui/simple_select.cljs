@@ -59,7 +59,7 @@
                                                              pattern (re-pattern query)]
                                                          (re-find pattern option-title)))))
 
-        create-new-from-query-handler (hooks/use-callback :once (fn [query option]
+        create-new-from-query-handler (hooks/use-callback :once (fn [query]
                                                                   {:type :create
                                                                    :query query}))]
 

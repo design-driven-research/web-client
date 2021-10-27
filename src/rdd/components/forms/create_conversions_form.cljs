@@ -1,7 +1,7 @@
 (ns rdd.components.forms.create-conversions-form
-  (:require ["@blueprintjs/core" :refer [Button FormGroup InputGroup ControlGroup NumericInput Dialog]]
+  (:require ["@blueprintjs/core" :refer [Button ControlGroup NumericInput Dialog]]
             [rdd.components.ui.simple-select :refer [SimpleSelect]]
-            [applied-science.js-interop :as j]
+
             [rdd.utils.for-indexed :refer [for-indexed]]
             [nano-id.core :refer [nano-id]]
             [rdd.components.forms.create-uom-form :refer [CreateUOMForm]]
@@ -11,8 +11,7 @@
             [helix.hooks :as hooks]
             [rdd.services.store :as store]
             [rdd.lib.defnc :refer [defnc]]
-            [rdd.providers.item-provider :refer [use-item-state]]
-            [rdd.specs.form-specs :as fs]))
+            [rdd.providers.item-provider :refer [use-item-state]]))
 
 
 (defnc ConversionRow
@@ -37,9 +36,9 @@
         state-info (bi/state-info fsm current-state-id)
 
         ;; Additional extracted values
-        validations (:validations state-info)
+
         context (:context state-info)
-        touches (:touches state-info)
+
 
         current-selected-uom (:to context)
         current-selected-uom-uuid (:uom/uuid current-selected-uom)
@@ -85,16 +84,7 @@
 
         on-touch (hooks/use-callback [fsm current-state-id context] (fn [field-id]
                                                                       (let [touched (bi/touch-field! fsm current-state-id field-id)]
-                                                                        (set-fsm! touched))))
-
-
-        name-invalid? (and (not (nil? (:uom/name validations)))
-                           (not (:uom/name validations))
-                           (:uom/name touches))
-
-        valid? (or
-                (= #{true} (set (vals validations)))
-                (= #{} (set (vals validations))))]
+                                                                        (set-fsm! touched))))]
 
     (d/div
      ($ ControlGroup
@@ -130,9 +120,8 @@
            from-uom
            to-uom
            state-info
-           on-touch
-           on-submit
-           on-field-change]}]
+
+           on-submit]}]
   (let [[conversions set-conversions!] (hooks/use-state [{:from from-uom}])
         [is-valid? set-is-valid!] (hooks/use-state false)
 

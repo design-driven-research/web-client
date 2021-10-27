@@ -1,7 +1,7 @@
 (ns rdd.providers.item-provider
   (:require
    ["react" :as react]
-   [helix.core :refer [$ defnc provider]]
+   [helix.core :refer [defnc provider]]
    [helix.hooks :as hooks]
    [rdd.hooks.use-item-reducer :refer [use-item-reducer]]))
 

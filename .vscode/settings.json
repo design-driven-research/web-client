@@ -2,9 +2,15 @@
   "calva.customREPLCommandSnippets": [
     {
       "name": "Reset Postmortem",
-      "ns": "user",
+      "ns": "cljs.user",
       "repl": "cljs",
       "snippet": "(reset-postmortem!)"
+    },
+    {
+      "name": "Tap current state",
+      "ns": "cljs.user",
+      "repl": "cljs",
+      "snippet": "(tap-current-state!)"
     }
   ],
   "files.exclude": {}

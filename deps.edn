@@ -28,9 +28,9 @@
 
  :aliases
  {:cljs
-  {:init-ns user
-   :extra-paths ["dev"]
-   :extra-deps  {thheller/shadow-cljs {:mvn/version "2.15.10"}}}
+  {:extra-paths ["dev"]
+   :extra-deps  {binaryage/devtools {:mvn/version "1.0.4"}
+                 thheller/shadow-cljs {:mvn/version "2.15.10"}}}
 
   :test {:extra-paths ["test"]
          :extra-deps {thheller/shadow-cljs {:mvn/version "2.15.10"}}}}}

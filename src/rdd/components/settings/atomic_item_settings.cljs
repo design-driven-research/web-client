@@ -4,7 +4,7 @@
             [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
-            [rdd.components.forms.item-conversions-settings :as ItemConversionSettings]
+            [rdd.components.forms.item-conversions-settings :refer [ItemConversionSettings]]
             [rdd.components.forms.item-default-settings :refer [ItemDefaultSettings]]
             [rdd.providers.item-provider :refer [use-item-state]]))
 
@@ -41,4 +41,4 @@
 
               ($ Tab {:id "conversions"
                       :title "Conversions"
-                      :panel ($ ItemConversionSettings/Core)})))))
+                      :panel ($ ItemConversionSettings)})))))

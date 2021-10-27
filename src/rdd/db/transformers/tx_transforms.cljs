@@ -16,6 +16,41 @@
        :uom/type type
        :uom/system system})))
 
+(defn build-role-tx-data
+  [roles]
+  (for [role roles]
+    (let [interval-ident (:time/duration-interval role)
+          prepped (assoc role
+                         :db/id (:role/name role)
+                         :time/duration-interval interval-ident)]
+      prepped)))
+
+(defn build-labor-tx-data
+  [labors]
+  (for [labor labors]
+    (let [interval-ident (-> labor :time/duration-interval :db/ident)
+          labor-role-uuid (-> labor :labor/role :role/uuid)
+          labor-name (:labor/name labor)
+          labor-temp-id labor-name
+          prepped (assoc labor
+                         :db/id labor-temp-id
+                         :labor/role [:role/uuid labor-role-uuid]
+                         :time/duration-interval interval-ident)]
+      prepped)))
+
+(defn build-process-tx-data
+  [processes]
+  (for [process processes]
+    (let [process-uuid (:process/uuid process)
+          process-temp-id process-uuid
+          uom-uuid (-> process :measurement/uom :uom/uuid)
+          labor-uuids (map (fn [ll] [:labor/uuid (:labor/uuid ll)]) (:process/labor process))
+          process-tx (assoc process
+                            :db/id process-temp-id
+                            :measurement/uom uom-uuid
+                            :process/labor labor-uuids)]
+      process-tx)))
+
 (defn build-conversion-tx-data
   [conversions]
   (for [conversion conversions]
@@ -46,14 +81,17 @@
           uom-temp-id (-> uom :uom/uuid)
           children (-> item :composite/contains)
           rli-temp-ids (map :recipe-line-item/uuid children)
-          production-type (-> item :item/production-type :db/ident)]
-      {:db/id uuid
-       :item/uuid uuid
-       :item/name name
-       :item/production-type production-type
-       :measurement/yield yield
-       :measurement/uom uom-temp-id
-       :composite/contains rli-temp-ids})))
+          production-type (-> item :item/production-type :db/ident)
+          process-uuid (-> item :item/process :process/uuid)]
+
+      (cond-> {:db/id uuid
+               :item/uuid uuid
+               :item/name name
+               :item/production-type production-type
+               :measurement/yield yield
+               :measurement/uom uom-temp-id
+               :composite/contains rli-temp-ids}
+        process-uuid (assoc :item/process process-uuid)))))
 
 (defn build-company-item-tx-data
   [company-items]
@@ -116,12 +154,27 @@
 (defn initial-remote->tx-data
   "Build tx-data from initial data payload across all entity types"
   [data]
+  (pm/spy>> :data data)
   (-> [(build-uom-tx-data (:uoms data))
+       (build-role-tx-data (:roles data))
        (build-conversion-tx-data (:conversions data))
        (build-item-tx-data (:items data))
+       (build-labor-tx-data (:labor data))
+       (build-process-tx-data (:processes data))
        (build-recipe-line-items-tx-data (:recipe-line-items data))
        (build-quote-tx-data (:quotes data))
        (build-company-tx-data (:companies data))
        (build-company-item-tx-data (:company-items data))]
       (flatten)
       (de-nill)))
+
+(comment
+
+
+  (build-process-tx-data (first (pm/log-for :data)))
+
+  (:process (first (pm/log-for :data)))
+
+  (tap> (first (pm/log-for :data)))
+  ;; 
+  )

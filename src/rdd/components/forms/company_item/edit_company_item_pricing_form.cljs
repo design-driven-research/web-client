@@ -19,7 +19,7 @@
 
         validations (:validations state-info)
         context (:context state-info)
-        touches (:touches state-info)
+
 
         current-selected-uom-uuid (:uom/uuid context)
         matched-uom (first (filter (fn [uom] (= current-selected-uom-uuid (:uom/uuid uom))) uoms))
@@ -40,13 +40,7 @@
                                                                             (on-field-change :uom/uuid new-uuid)
                                                                             (set-is-showing-create-uom! false))))
 
-        name-invalid? (and (not (nil? (:currency.usd/cost validations)))
-                           (not (:currency.usd/cost validations))
-                           (:currency.usd/cost touches))
 
-        sku-invalid? (and (not (nil? (:measurement/quantity validations)))
-                          (not (:measurement/quantity validations))
-                          (:measurement/quantity touches))
 
         valid? (or
                 (= #{true} (set (vals validations)))

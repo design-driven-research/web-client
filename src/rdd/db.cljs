@@ -9,7 +9,10 @@
 (defn item-schema
   []
   {:item/name {:db/unique :db.unique/identity}
-   :item/uuid {:db/unique :db.unique/identity}})
+   :item/uuid {:db/unique :db.unique/identity}
+
+   :item/process {:db/valueType :db.type/ref
+                  :db/cardinality :db.cardinality/one}})
 
 (defn company-schema
   []
@@ -17,6 +20,23 @@
    :company/name {:db/unique :db.unique/identity}
    :company/company-items {:db/valueType :db.type/ref
                            :db/cardinality :db.cardinality/many}})
+
+(defn role-schema
+  []
+  {:role/uuid {:db/unique :db.unique/identity}
+   :role/name {:db/unique :db.unique/identity}})
+
+(defn labor-schema
+  []
+  {:labor/uuid {:db/unique :db.unique/identity}
+   :labor/role {:db/valueType :db.type/ref
+                :db/cardinality :db.cardinality/one}})
+
+(defn process-schema
+  []
+  {:process/uuid {:db/unique :db.unique/identity}
+   :process/labor {:db/valueType :db.type/ref
+                   :db/cardinality :db.cardinality/many}})
 
 (defn company-item-schema
   []
@@ -70,8 +90,11 @@
   []
   (merge
    (uom-schema)
+   (role-schema)
    (conversions-schema)
    (item-schema)
+   (labor-schema)
+   (process-schema)
    (recipe-line-item-schema)
    (company-schema)
    (company-item-schema)
@@ -99,7 +122,11 @@
 
    {:db/ident :units.type/WEIGHT}
    {:db/ident :units.type/VOLUME}
-   {:db/ident :units.type/CUSTOM}])
+   {:db/ident :units.type/CUSTOM}
+
+   {:db/ident :time.interval/SECOND}
+   {:db/ident :time.interval/MINUTE}
+   {:db/ident :time.interval/HOUR}])
 
 (declare reset-db! seed-db setup-listeners)
 
@@ -148,6 +175,7 @@
   [raw-data]
   (let [data (-> raw-data :result :data)
         tx-data (initial-remote->tx-data data)]
+    (tap> {:tx-data tx-data})
     (d/transact! @conn tx-data)
     (publish! {:topic :remote-db-loaded})))
 

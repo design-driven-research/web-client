@@ -13,7 +13,7 @@
   (let [;;  Extracted values
         rli-uuid (:recipe-line-item/uuid rli)
         selected-item-name (-> rli :recipe-line-item/child-item :item/name)
-        selected-item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
+
 
         ;; Local state
         [create-item-state set-create-item-state!] (hooks/use-state {:current-state :empty})
@@ -28,8 +28,7 @@
         on-child-item-selected-wrapper (hooks/use-callback
                                         :once
                                         (fn
-                                          [{:as args
-                                            :keys [item-uuid]}]
+                                          [{:keys [item-uuid]}]
                                           (on-item-selected
                                            {:rli-uuid rli-uuid
                                             :item-uuid item-uuid})))
@@ -50,8 +49,7 @@
         on-create-selected-wrapper (hooks/use-callback
                                     :once
                                     (fn
-                                      [{:as args
-                                        :keys [query]}]
+                                      [{:keys [query]}]
                                       (set-create-item-state!
                                        {:current-state :creating
                                         :value query})))]

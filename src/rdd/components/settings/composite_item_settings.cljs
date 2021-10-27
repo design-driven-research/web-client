@@ -4,24 +4,29 @@
             [rdd.lib.defnc :refer [defnc]]
             [helix.dom :as d]
             [helix.hooks :as hooks]
-            [rdd.components.forms.item-conversions-settings :as ItemConversionSettings]
-            [rdd.components.forms.item-labor-settings :as ItemLaborSettings]
+            [rdd.components.forms.item-conversions-settings :refer [ItemConversionSettings]]
+            [rdd.components.forms.item-labor-settings :refer [ItemLaborSettings]]
             [rdd.components.forms.item-yield-settings :refer [ItemYieldSettings]]
             [rdd.providers.item-provider :refer [use-item-state]]))
 
 (defnc CompositeItemSettings
   [{:keys [rli]}]
-  (tap> rli)
-  (let [item-uuid (-> rli :recipe-line-item/child-item :item/uuid)
-        item-yield (-> rli :recipe-line-item/child-item :item/yield)
-        item-yield-uom-code (-> rli :recipe-line-item/child-item :item/yield-uom-code)
-        [current-selected-index set-current-selected-index] (hooks/use-state "yield")
+  (let [;; State
         [state _ builder] (use-item-state)
+        [current-selected-index set-current-selected-index] (hooks/use-state "yield")
 
+        ;; Extracted values
+        child-item (-> rli :recipe-line-item/child-item)
+        item-uuid (:item/uuid child-item)
+        item-yield (:item/yield child-item)
+        item-yield-uom-code (:item/yield-uom-code child-item)
+        item-process (:item/process child-item)
         uoms (:uoms state)
+        roles (:roles state)
+
+        ;; Callbacks and handlers
         item-yield-changed-handler (builder :update-item-yield :once)
         item-yield-uom-changed-handler (builder :update-item-yield-uom :once)
-
 
         update-yield-handler (hooks/use-callback [item-uuid] (fn [item-uuid yield]
                                                                (item-yield-changed-handler {:item-uuid item-uuid
@@ -45,8 +50,9 @@
                                                    :item-yield-uom-changed-handler (partial update-yield-uom-handler item-uuid)})})
               ($ Tab {:id "labor"
                       :title "Labor"
-                      :panel ($ ItemLaborSettings/Core)})
+                      :panel ($ ItemLaborSettings {:process item-process
+                                                   :roles roles})})
               ($ Tab {:id "conversions"
                       :title "Conversions"
-                      :panel ($ ItemConversionSettings/Core)})))))
+                      :panel ($ ItemConversionSettings)})))))
 

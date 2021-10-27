@@ -13,7 +13,7 @@
                                     on-selected]}]
 
   (let [;;  Extracted values
-        rli-uuid (:recipe-line-item/uuid rli)
+
 
         child-item (-> rli :recipe-line-item/child-item)
 
@@ -38,8 +38,7 @@
         on-selected-wrapper (hooks/use-callback
                              :once
                              (fn
-                               [{:as args
-                                 :keys [uuid]}]
+                               [{:keys [uuid]}]
                                (on-selected uuid)))
 
         on-create-submit (hooks/use-callback
@@ -54,8 +53,7 @@
         on-create-selected-wrapper (hooks/use-callback
                                     :once
                                     (fn
-                                      [{:as args
-                                        :keys [query]}]
+                                      [{:keys [query]}]
                                       (set-create-company-item-state!
                                        {:current-state :creating
                                         :value query})))]

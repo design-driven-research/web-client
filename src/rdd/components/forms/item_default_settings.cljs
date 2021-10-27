@@ -1,13 +1,12 @@
 (ns rdd.components.forms.item-default-settings
   (:require [helix.core :refer [$]]
-            [helix.hooks :as hooks]
+
             [rdd.lib.defnc :refer [defnc]]
             [rdd.components.ui.uom-select :refer [UOMSelect]]
             [helix.dom :as d]))
 
 (defnc ItemDefaultSettings
-  [{:keys [item-uuid
-           label
+  [{:keys [label
            item-yield-uom-code
            item-yield-uom-changed-handler
            uoms]}]

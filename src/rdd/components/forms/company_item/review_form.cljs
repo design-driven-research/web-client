@@ -5,11 +5,9 @@
             [rdd.lib.defnc :refer [defnc]]))
 
 (defnc ReviewForm
-  [{:keys [state-info
-           on-submit]}]
+  [{:keys [on-submit]}]
 
-  (let [context (:context state-info)]
-    (d/div
-     ($ Button {:intent "primary"
-                :onClick on-submit
-                :text "Submit all"}))))
+  (d/div
+   ($ Button {:intent "primary"
+              :onClick on-submit
+              :text "Submit all"})))

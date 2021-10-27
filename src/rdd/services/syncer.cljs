@@ -1,7 +1,7 @@
 (ns rdd.services.syncer
   (:require-macros
    [mount.core :refer [defstate]]
-   [cljs.core.async.macros :refer [go go-loop]])
+   [cljs.core.async.macros :refer [go-loop]])
   (:require [ajax.core :refer [POST]]
             [cljs.core.async :refer [<! chan put! timeout]]
             [rdd.services.event-bus :refer [subscribe!]]))

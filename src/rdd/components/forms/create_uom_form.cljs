@@ -18,7 +18,7 @@
                      ::bi/state  :create-uom})
 
 (defnc CreateUOMForm
-  [{:keys [query on-submit]}]
+  [{:keys [on-submit]}]
   (let [[fsm set-fsm!] (hooks/use-state default-states)
 
         ;; Extracted values

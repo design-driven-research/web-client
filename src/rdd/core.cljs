@@ -2,15 +2,14 @@
   (:require [helix.core :refer [$]]
             [rdd.lib.defnc :refer [defnc]]
             [mount.core :as mount]
-            [rdd.components.menus.header :refer [NavBar]]
+
             [rdd.reducers.requires]
             [rdd.db]
             [rdd.services.syncer]
             [rdd.subscriptions]
             [rdd.services.store]
             [rdd.services.event-bus :as eb]
-            [helix.hooks :as hooks]
-            [helix.dom :as d]
+
             [rdd.views.edit-recipe :as erv]
             [rdd.providers.item-provider :refer [ItemProvider]]
             ["react-dom" :as rdom]

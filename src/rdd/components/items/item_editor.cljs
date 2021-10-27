@@ -21,13 +21,13 @@
 (defnc Editor
   "The main entry point for a recipe."
   [{:keys [item]
-    {:item/keys [children total-cost]} :item}]
+    {:item/keys [children cost-per-default-uom]} :item}]
 
   (let [has-children? (seq children)
         sorted-children (sort-by :recipe-line-item/position children)]
     (d/div {:class "mt-2 xl:w-9/12 md:w-full"}
            (d/h1 (:item-name item))
-           (d/p {:class "text-lg"} "Total cost: $" (js/parseInt total-cost))
+           (d/p {:class "text-lg"} "Total cost: $" (js/parseInt cost-per-default-uom))
 
            (when has-children?
              (for-indexed [rli index sorted-children]
@@ -166,13 +166,7 @@
                                :once
                                #(set-is-settings-open! false))
 
-        show-detailed-info! (hooks/use-callback
-                             :once
-                             #(set-is-detailed-info! true))
 
-        hide-detailed-info! (hooks/use-callback
-                             :once
-                             #(set-is-detailed-info! false))
 
         toggle-detailed-info! (hooks/use-callback
                                [is-detailed-info?]

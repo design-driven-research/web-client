@@ -1,8 +1,7 @@
 (ns rdd.models.quote
   (:require [clojure.set]
             [datascript.core :as d]
-            [rdd.db :refer [db]]
-            [postmortem.core :as pm]))
+            [rdd.db :refer [db]]))
 
 
 (defn quotes
